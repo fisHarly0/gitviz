@@ -1,0 +1,647 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --bg-elev: #161b22;
+  --bg-elev2: #1f262e;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --accent-warm: #e0b800;
+  --danger: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+html,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 14px;
+}
+
+button {
+  background: var(--bg-elev2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+button:hover {
+  border-color: var(--accent);
+}
+input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  width: 100%;
+}
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--bg-elev2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.app-header {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--bg-elev);
+}
+.app-header h1 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+.app-header p {
+  margin: 0;
+  color: var(--text-dim);
+}
+.source-info {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-dim);
+}
+
+.app.start {
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 60px;
+}
+.app.start .app-header {
+  border: none;
+  flex-direction: column;
+  align-items: center;
+  background: transparent;
+  gap: 6px;
+}
+
+.repo-loader {
+  width: min(560px, 92vw);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  margin-top: 24px;
+}
+.mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 6px 10px;
+  color: var(--text-dim);
+}
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.mode-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mode-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.mode-body small {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.mode-body .alt-btn {
+  background: transparent;
+  border-style: dashed;
+  font-size: 12px;
+  opacity: 0.7;
+}
+.mode-body .alt-btn:hover {
+  opacity: 1;
+}
+.hint {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.progress {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.error {
+  color: var(--danger);
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(360px, 38%) 1fr;
+  flex: 1;
+  min-height: 0;
+}
+.graph-pane,
+.detail-pane {
+  overflow: auto;
+  min-width: 0;
+}
+.graph-pane {
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  padding: 12px 8px 24px;
+}
+.detail-pane {
+  background: var(--bg);
+}
+
+.commit-graph {
+  font-size: 12px;
+}
+.commit-graph svg text {
+  fill: var(--text);
+}
+.loading,
+.empty,
+.placeholder,
+.muted {
+  color: var(--text-dim);
+  padding: 18px;
+  font-size: 13px;
+}
+
+.commit-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.commit-detail header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.commit-detail .oid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.commit-detail .msg {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+.commit-detail .meta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.files-and-diff {
+  display: grid;
+  grid-template-columns: minmax(220px, 28%) 1fr;
+  flex: 1;
+  min-height: 0;
+}
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+}
+.file-list li {
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.file-list li:hover {
+  background: var(--bg-elev2);
+}
+.file-list li.active {
+  background: var(--bg-elev2);
+  color: var(--text);
+}
+.file-list .path {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-badge {
+  font-size: 10px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.diff-pane {
+  overflow: auto;
+  background: var(--bg);
+}
+.patch {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  margin: 0;
+  padding: 12px;
+  white-space: pre;
+}
+.patch .add {
+  background: rgba(45, 164, 78, 0.18);
+  color: #7ee2a8;
+}
+.patch .rem {
+  background: rgba(207, 34, 46, 0.18);
+  color: #ff9aa2;
+}
+.patch .hunk {
+  color: var(--accent);
+}
+
+.switch {
+  font-size: 12px;
+}
+
+/* === gitviz 游戏存档式 UI · P0 三态状态机视觉 === */
+
+.tagline {
+  margin: 4px 0 0;
+  color: var(--accent-warm);
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* Preview 顶部横幅 · 黄色提示 */
+.preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  background: linear-gradient(90deg, rgba(224, 184, 0, 0.12), rgba(224, 184, 0, 0.04));
+  border-bottom: 1px solid rgba(224, 184, 0, 0.4);
+  font-size: 12px;
+  color: var(--text);
+  flex-wrap: wrap;
+}
+.preview-banner .badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--accent-warm);
+  color: #1a1300;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.preview-banner .msg {
+  flex: 1;
+  min-width: 280px;
+}
+.preview-banner .msg strong {
+  color: #f59e0b;
+}
+.preview-banner .return-btn {
+  background: transparent;
+  border: 1px solid rgba(224, 184, 0, 0.5);
+  color: var(--accent-warm);
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.preview-banner .return-btn:hover {
+  background: rgba(224, 184, 0, 0.12);
+  border-color: var(--accent-warm);
+}
+
+/* 底部状态栏 · 三态对应不同 tag 配色 */
+.mode-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elev);
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.mode-status-bar.preview {
+  border-top-color: rgba(224, 184, 0, 0.5);
+  background: linear-gradient(0deg, rgba(224, 184, 0, 0.05), transparent);
+}
+.mode-status-bar.edit {
+  border-top-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(0deg, rgba(16, 185, 129, 0.05), transparent);
+}
+.mode-status-bar .tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+  border: 1px solid currentColor;
+  flex-shrink: 0;
+}
+.mode-status-bar .tag.browse {
+  color: #10b981;
+}
+.mode-status-bar .tag.preview {
+  color: var(--accent-warm);
+}
+.mode-status-bar .tag.edit {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+.mode-status-bar code {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* === P1 · 文件 Edit 按钮 + Monaco 编辑器面板 === */
+
+.file-list li {
+  justify-content: space-between;
+}
+.file-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.edit-file-btn {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #f59e0b;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.4px;
+  opacity: 0.85;
+}
+.edit-file-btn:hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #f59e0b;
+  opacity: 1;
+}
+
+.editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
+}
+.editor-header {
+  padding: 10px 14px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.editor-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.if-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+.editor-header .filepath {
+  font-size: 12px;
+}
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+  min-width: 240px;
+}
+.commit-msg-input {
+  flex: 1;
+  min-width: 180px;
+  font-size: 12px;
+}
+.save-btn {
+  background: #10b981;
+  color: #052e1a;
+  border-color: #10b981;
+  font-weight: 600;
+  font-size: 12px;
+}
+.save-btn:hover {
+  background: #34d399;
+  border-color: #34d399;
+}
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.cancel-btn {
+  font-size: 12px;
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+.cancel-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.editor-body {
+  flex: 1;
+  min-height: 0;
+}
+.editor-error {
+  margin: 8px 14px;
+}
+.edit-error {
+  margin: 6px 18px;
+}
+
+/* === P2 · IfLinesPanel 分支切换条 === */
+
+.if-lines-panel {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.if-lines-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.if-lines-row .lbl {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 4px;
+}
+.branch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: transparent;
+  border-width: 1px;
+  border-style: solid;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.branch-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.branch-chip code {
+  background: transparent;
+  padding: 0;
+  opacity: 0.6;
+  font-size: 10px;
+}
+.branch-chip.main {
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #10b981;
+}
+.branch-chip.main .dot {
+  background: #10b981;
+}
+.branch-chip.main:hover,
+.branch-chip.main.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+}
+.branch-chip.if {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+}
+.branch-chip.if .dot {
+  background: #f59e0b;
+}
+.branch-chip.if.i1 {
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+}
+.branch-chip.if.i1 .dot {
+  background: #fbbf24;
+}
+.branch-chip.if.i2 {
+  border-color: rgba(251, 146, 60, 0.4);
+  color: #fb923c;
+}
+.branch-chip.if.i2 .dot {
+  background: #fb923c;
+}
+.branch-chip.if.i3 {
+  border-color: rgba(250, 204, 21, 0.4);
+  color: #facc15;
+}
+.branch-chip.if.i3 .dot {
+  background: #facc15;
+}
+.branch-chip.if.i4 {
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #eab308;
+}
+.branch-chip.if.i4 .dot {
+  background: #eab308;
+}
+.branch-chip.if:hover,
+.branch-chip.if.active {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: currentColor;
+}
+.branch-chip.active {
+  font-weight: 600;
+  outline: 1px solid currentColor;
+  outline-offset: 1px;
+}
+.empty-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.export-slot {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.export-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.export-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+}
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.export-error {
+  font-size: 11px;
+  color: var(--danger);
+}
