@@ -79,19 +79,39 @@ export async function loadFilesIntoFs(fileList, onProgress) {
   return { dir: ROOT }
 }
 
+// 单文件超此阈值就跳过写入（IndexedDB 单 entry 大限制 + arrayBuffer 复制内存压力）
+const SINGLE_FILE_SKIP_BYTES = 100 * 1024 * 1024 // 100 MB
+// 单文件超此阈值仍写入但记录为大文件
+const LARGE_FILE_FLAG_BYTES = 5 * 1024 * 1024 // 5 MB
+// 总仓库 IndexedDB 容量软上限提示（Chrome 默认 quota 大约磁盘剩余的 60%；超 500MB 提醒）
+const TOTAL_SIZE_WARN_BYTES = 500 * 1024 * 1024
+
+function fmtBytes(n) {
+  if (n < 1024) return n + ' B'
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
+  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB'
+  return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+}
+
 /**
  * 用 File System Access API (Chrome 86+) 加载目录 · 比 webkitdirectory 可靠
  * 关键优势：能读 dot 开头的隐藏目录（如 .git），webkitdirectory 在浏览器层面会过滤
+ *
+ * 进度回调 payload 含:
+ *   { done, total, current, bytes, currentBytes, skipped, largeFiles, slowFiles }
+ *
  * @param {FileSystemDirectoryHandle} dirHandle
- * @param {(progress: { done: number, total: number, current: string }) => void} [onProgress]
+ * @param {(progress: object) => void} [onProgress]
  */
 export async function loadDirHandleIntoFs(dirHandle, onProgress) {
+  const t0 = performance.now()
   await clearFs()
   const fs = getFs().promises
 
   await fs.mkdir(ROOT).catch(() => {})
 
   // 第一遍扫一遍数总文件数（progress 用）
+  const tCountStart = performance.now()
   let total = 0
   async function countFiles(handle) {
     for await (const entry of handle.values()) {
@@ -100,11 +120,16 @@ export async function loadDirHandleIntoFs(dirHandle, onProgress) {
     }
   }
   await countFiles(dirHandle)
+  const tCountEnd = performance.now()
 
   let done = 0
   let gitFileCount = 0
   let gitObjectCount = 0
+  let totalBytes = 0
   const sampleGitObjects = []
+  const largeFiles = [] // [{ path, bytes }] 超 5MB
+  const slowFiles = [] // [{ path, ms, bytes }] 写入超 200ms
+  const skipped = [] // [{ path, bytes, reason }]
   const mkdirs = new Set()
   async function ensureDir(dirPath) {
     if (mkdirs.has(dirPath)) return
@@ -119,27 +144,66 @@ export async function loadDirHandleIntoFs(dirHandle, onProgress) {
     }
   }
 
+  function emitProgress(currentPath, currentBytes) {
+    if (!onProgress) return
+    onProgress({
+      done,
+      total,
+      current: currentPath,
+      currentBytes,
+      bytes: totalBytes,
+      skipped: skipped.length,
+      largeFiles: largeFiles.length,
+      slowFiles: slowFiles.length,
+    })
+  }
+
   async function walk(handle, prefix) {
     for await (const entry of handle.values()) {
       const inner = prefix ? `${prefix}/${entry.name}` : entry.name
       if (entry.kind === 'file') {
         try {
           const file = await entry.getFile()
+          const size = file.size
+          // 超大单文件跳过 · 避免 arrayBuffer OOM 或 IndexedDB 卡死
+          if (size > SINGLE_FILE_SKIP_BYTES) {
+            skipped.push({ path: inner, bytes: size, reason: `> ${fmtBytes(SINGLE_FILE_SKIP_BYTES)}` })
+            console.warn('[gitviz] SKIP large file', inner, fmtBytes(size), '— exceeds single-file cap')
+            done++
+            emitProgress(inner + ' (skipped)', size)
+            continue
+          }
           const target = ROOT + '/' + inner
           const dirOf = target.slice(0, target.lastIndexOf('/'))
           await ensureDir(dirOf)
+          const tWriteStart = performance.now()
           const buf = new Uint8Array(await file.arrayBuffer())
           await fs.writeFile(target, buf)
+          const writeMs = performance.now() - tWriteStart
+          totalBytes += size
           done++
+          if (size >= LARGE_FILE_FLAG_BYTES) {
+            largeFiles.push({ path: inner, bytes: size })
+          }
+          if (writeMs > 200) {
+            slowFiles.push({ path: inner, ms: writeMs, bytes: size })
+          }
           if (inner.startsWith('.git/')) gitFileCount++
           if (inner.startsWith('.git/objects/') && !inner.endsWith('/info/packs')) {
             gitObjectCount++
             if (sampleGitObjects.length < 8) sampleGitObjects.push(inner)
           }
-          if (onProgress && (done % 50 === 0 || done === total)) {
-            onProgress({ done, total, current: inner })
+          // 每 50 文件 / 大文件 / 慢文件 / 完成时都触发 UI 更新
+          if (
+            done % 50 === 0 ||
+            done === total ||
+            size >= LARGE_FILE_FLAG_BYTES ||
+            writeMs > 200
+          ) {
+            emitProgress(inner, size)
           }
         } catch (e) {
+          skipped.push({ path: inner, bytes: 0, reason: e?.message || 'unknown' })
           console.warn('[gitviz] skip file', inner, e?.message)
         }
       } else if (entry.kind === 'directory') {
@@ -147,15 +211,67 @@ export async function loadDirHandleIntoFs(dirHandle, onProgress) {
       }
     }
   }
+  const tWalkStart = performance.now()
   await walk(dirHandle, '')
+  const tWalkEnd = performance.now()
 
-  console.log('[gitviz] FSA API loaded', done, 'files ·', gitFileCount, '.git files ·', gitObjectCount, '.git/objects entries')
+  // 排序 largeFiles / slowFiles 取 top
+  largeFiles.sort((a, b) => b.bytes - a.bytes)
+  slowFiles.sort((a, b) => b.ms - a.ms)
+  const top5Large = largeFiles.slice(0, 5)
+  const top5Slow = slowFiles.slice(0, 5)
+
+  const totalMs = performance.now() - t0
+  console.log(
+    `[gitviz] FSA API loaded ${done} files (${fmtBytes(totalBytes)}) in ${(totalMs / 1000).toFixed(2)}s ·`,
+    `${gitFileCount} .git files · ${gitObjectCount} .git/objects entries`,
+  )
+  console.log(`[gitviz]   timing: count=${(tCountEnd - tCountStart).toFixed(0)}ms · walk+write=${(tWalkEnd - tWalkStart).toFixed(0)}ms`)
+  if (skipped.length) {
+    console.warn('[gitviz]   SKIPPED', skipped.length, 'files:', skipped.slice(0, 10))
+  }
+  if (top5Large.length) {
+    console.log(
+      '[gitviz]   top 5 largest:',
+      top5Large.map((f) => `${f.path} (${fmtBytes(f.bytes)})`),
+    )
+  }
+  if (top5Slow.length) {
+    console.log(
+      '[gitviz]   top 5 slowest writes:',
+      top5Slow.map((f) => `${f.path} (${f.ms.toFixed(0)}ms · ${fmtBytes(f.bytes)})`),
+    )
+  }
+  if (totalBytes > TOTAL_SIZE_WARN_BYTES) {
+    console.warn(
+      `[gitviz]   repo size ${fmtBytes(totalBytes)} > ${fmtBytes(TOTAL_SIZE_WARN_BYTES)} — may hit IndexedDB quota on small disks`,
+    )
+  }
   if (gitObjectCount === 0) {
     console.warn('[gitviz] .git/objects/ is empty — the picked folder may not be a git repo root.')
   } else {
     console.log('[gitviz] sample .git/objects paths:', sampleGitObjects)
   }
-  return { dir: ROOT }
+  // 暴露完整 stats 给 UI 调用方 + 写 window 供 F12 直接查
+  const stats = {
+    done,
+    total,
+    totalBytes,
+    gitFileCount,
+    gitObjectCount,
+    timing: {
+      total: totalMs,
+      count: tCountEnd - tCountStart,
+      walk: tWalkEnd - tWalkStart,
+    },
+    skipped,
+    largeFiles: top5Large,
+    slowFiles: top5Slow,
+  }
+  if (typeof window !== 'undefined') {
+    window.__gitvizLoadStats = stats
+  }
+  return { dir: ROOT, stats }
 }
 
 function parseAuthor(c) {
@@ -216,7 +332,12 @@ export function createLocalAdapter() {
     async listCommits({ ref, depth = 200 } = {}) {
       const opts = { fs, dir, depth }
       if (ref) opts.ref = ref
+      const t0 = performance.now()
       const commits = await git.log(opts)
+      const ms = performance.now() - t0
+      if (ms > 500) {
+        console.warn(`[gitviz] listCommits(${ref || 'HEAD'}, depth=${depth}) slow: ${ms.toFixed(0)}ms · ${commits.length} commits`)
+      }
       return commits.map((c) => ({
         oid: c.oid,
         parents: c.commit.parent || [],

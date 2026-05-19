@@ -209,13 +209,32 @@ export default function CommitGraph({ adapter, onSelect, selectedOid, refreshKey
               : ''
 
             const isSelected = selectedOid === c.oid
+            const handleCommitClick = (_, evt) => {
+              // 点击前给目标 circle 临时加 pulsing class，让动画有一帧时间起跳再触发 re-render
+              try {
+                const tgt = evt && (evt.target || evt.currentTarget)
+                const circle =
+                  tgt && tgt.tagName && tgt.tagName.toLowerCase() === 'circle'
+                    ? tgt
+                    : tgt && tgt.closest
+                      ? tgt.closest('g')?.querySelector?.('circle')
+                      : null
+                if (circle) {
+                  circle.classList.add('pulsing')
+                  setTimeout(() => circle.classList.remove('pulsing'), 360)
+                }
+              } catch {
+                // 防御性：DOM 不可访问时静默
+              }
+              onSelect(c.oid)
+            }
             branchRef.commit({
               hash: c.oid,
               subject: shortHash(c.oid) + ' ' + c.message + refLabel,
-              onMessageClick: () => onSelect(c.oid),
-              onClick: () => onSelect(c.oid),
+              onMessageClick: (_, evt) => handleCommitClick(_, evt),
+              onClick: (_, evt) => handleCommitClick(_, evt),
               style: isSelected
-                ? { dot: { color: SELECTED_DOT, size: 10, strokeColor: SELECTED_DOT, strokeWidth: 2 } }
+                ? { dot: { color: SELECTED_DOT, size: 11, strokeColor: SELECTED_DOT, strokeWidth: 2 } }
                 : undefined,
             })
           }

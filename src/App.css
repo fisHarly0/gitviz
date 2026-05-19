@@ -157,7 +157,32 @@ code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
   color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
+.progress-current {
+  font-size: 11px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.progress-flags {
+  display: flex;
+  gap: 6px;
+  font-size: 10px;
+  margin-top: 2px;
+}
+.progress-flags .flag {
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  letter-spacing: 0.3px;
+}
+.progress-flags .flag.large { color: var(--accent-warm); }
+.progress-flags .flag.slow { color: #fb923c; }
+.progress-flags .flag.skipped { color: var(--danger); }
 .error {
   color: var(--danger);
   background: rgba(255, 107, 107, 0.08);
@@ -194,6 +219,85 @@ code {
 }
 .commit-graph svg text {
   fill: var(--text);
+}
+/* commit dot · 平滑过渡 + hover 放大 + 选中态 glow */
+.commit-graph svg circle {
+  cursor: pointer;
+  transition: r 0.15s ease, stroke-width 0.15s ease, filter 0.15s ease;
+}
+.commit-graph svg circle:hover {
+  r: 7;
+  filter: drop-shadow(0 0 6px currentColor) brightness(1.2);
+}
+/* 选中 commit 的 dot 用 yellow-300 加柔光 */
+.commit-graph svg circle[fill="#fde047"] {
+  filter: drop-shadow(0 0 5px #fde047);
+}
+.commit-graph svg circle[fill="#fde047"]:hover {
+  r: 11;
+  filter: drop-shadow(0 0 9px #fde047) brightness(1.15);
+}
+/* commit subject 文字 hover 也变高亮，提示可点 */
+.commit-graph svg text {
+  transition: fill 0.12s ease;
+  cursor: pointer;
+}
+.commit-graph svg text:hover {
+  fill: #fde047;
+}
+
+/* === CommitDetail loading skeleton (替代纯文字 "Loading commit...") === */
+.detail-skeleton {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.skel-line {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-elev) 0%,
+    var(--bg-elev2) 50%,
+    var(--bg-elev) 100%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.2s linear infinite;
+}
+.skel-line.oid { width: 240px; height: 10px; opacity: 0.7; }
+.skel-line.msg { width: 70%; height: 16px; }
+.skel-line.meta { width: 180px; height: 10px; opacity: 0.6; }
+.skel-line.file { width: 60%; }
+.skel-line.file.short { width: 35%; }
+.skel-block {
+  height: 120px;
+  margin-top: 8px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-elev) 0%,
+    var(--bg-elev2) 50%,
+    var(--bg-elev) 100%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.2s linear infinite;
+}
+@keyframes skel-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 点击 commit 时的临时 ripple class（CommitGraph 调用 onSelect 时通过 body 触发） */
+@keyframes commit-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.commit-graph svg circle.pulsing {
+  animation: commit-pulse 0.32s ease-out;
+  transform-origin: center;
+  transform-box: fill-box;
 }
 .loading,
 .empty,

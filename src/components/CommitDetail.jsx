@@ -20,6 +20,35 @@ function StatusBadge({ status }) {
   )
 }
 
+function CommitDetailSkeleton() {
+  return (
+    <div className="commit-detail">
+      <header>
+        <div className="skel-line oid" />
+        <div className="skel-line msg" style={{ marginTop: 8 }} />
+        <div className="skel-line meta" style={{ marginTop: 6 }} />
+      </header>
+      <div className="files-and-diff">
+        <ul className="file-list" style={{ padding: '12px' }}>
+          <li style={{ display: 'block', padding: '6px 0' }}>
+            <div className="skel-line file" />
+          </li>
+          <li style={{ display: 'block', padding: '6px 0' }}>
+            <div className="skel-line file short" />
+          </li>
+          <li style={{ display: 'block', padding: '6px 0' }}>
+            <div className="skel-line file" />
+          </li>
+        </ul>
+        <div className="diff-pane" style={{ padding: 12 }}>
+          <div className="skel-block" />
+          <div className="skel-block" style={{ marginTop: 10, height: 80 }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PatchView({ patch }) {
   if (!patch) return <div className="muted">No patch available.</div>
   return (
@@ -75,7 +104,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
   if (!oid) {
     return <div className="placeholder">Pick a commit on the left.</div>
   }
-  if (loading) return <div className="loading">Loading commit...</div>
+  if (loading) return <CommitDetailSkeleton />
   if (error) return <div className="error">{error}</div>
   if (!detail) return null
 

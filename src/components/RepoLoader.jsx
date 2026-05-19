@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react'
 import { loadFilesIntoFs, loadDirHandleIntoFs, createLocalAdapter } from '../adapters/localAdapter.js'
+
+function fmtBytes(n) {
+  if (n < 1024) return n + ' B'
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
+  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB'
+  return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+}
 import {
   createGithubAdapter,
   loadPAT,
@@ -124,9 +131,38 @@ export default function RepoLoader({ onLoaded }) {
           />
           {progress && (
             <div className="progress">
-              Loading {progress.done}
-              {progress.total ? ` / ${progress.total}` : ''}
-              {progress.current ? `: ${progress.current}` : ''}
+              <div>
+                Loading {progress.done}
+                {progress.total ? ` / ${progress.total}` : ''}
+                {typeof progress.bytes === 'number' ? ` · ${fmtBytes(progress.bytes)}` : ''}
+              </div>
+              {progress.current && (
+                <div className="progress-current">
+                  {progress.current}
+                  {typeof progress.currentBytes === 'number' && progress.currentBytes > 1024 * 1024
+                    ? ` (${fmtBytes(progress.currentBytes)})`
+                    : ''}
+                </div>
+              )}
+              {(progress.largeFiles > 0 || progress.slowFiles > 0 || progress.skipped > 0) && (
+                <div className="progress-flags">
+                  {progress.largeFiles > 0 && (
+                    <span className="flag large" title="files > 5MB">
+                      {progress.largeFiles} large
+                    </span>
+                  )}
+                  {progress.slowFiles > 0 && (
+                    <span className="flag slow" title="single-write > 200ms">
+                      {progress.slowFiles} slow
+                    </span>
+                  )}
+                  {progress.skipped > 0 && (
+                    <span className="flag skipped" title="skipped: >100MB or error">
+                      {progress.skipped} skipped
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
