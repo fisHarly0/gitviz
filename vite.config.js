@@ -1,16 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
-// isomorphic-git 在浏览器跑时需要 node globals (Buffer / process 等)
-// FileSystem.read 内部 Buffer.from(uint8Array) 没 polyfill 会 throw → 错误被 swallow → 报 "Could not find <oid>"
-// https://vite.dev/config/
+// Tauri 桌面版：所有 git 操作走 Rust 后端 (gix)，无需 Buffer / process polyfill。
+// vite-plugin-node-polyfills 已在 P-Tauri-1 移除。
 export default defineConfig({
-  plugins: [
-    react(),
-    nodePolyfills({
-      include: ['buffer', 'process'],
-      globals: { Buffer: true, process: true },
-    }),
-  ],
+  plugins: [react()],
+  // Tauri 的 dev server 配置：固定端口 + 不自动打开浏览器（窗口由 Tauri 起）
+  clearScreen: false,
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
 })

@@ -1,12 +1,6 @@
-import { useRef, useState } from 'react'
-import { loadFilesIntoFs, loadDirHandleIntoFs, createLocalAdapter } from '../adapters/localAdapter.js'
-
-function fmtBytes(n) {
-  if (n < 1024) return n + ' B'
-  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
-  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB'
-  return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB'
-}
+import { useState } from 'react'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { openRepo, createTauriAdapter } from '../adapters/tauriAdapter.js'
 import {
   createGithubAdapter,
   loadPAT,
@@ -16,58 +10,38 @@ import {
 
 export default function RepoLoader({ onLoaded }) {
   const [mode, setMode] = useState('local')
-  const [progress, setProgress] = useState(null)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [pickedPath, setPickedPath] = useState('')
   const [repoSpec, setRepoSpec] = useState('isomorphic-git/isomorphic-git')
   const [pat, setPat] = useState(loadPAT())
-  const inputRef = useRef(null)
 
-  const hasFSA = typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
-
-  async function handleFSAPick() {
+  async function handlePickFolder() {
     setError('')
-    if (!hasFSA) {
-      setError(
-        'File System Access API not available. Need Chrome/Edge 86+ on https or localhost.',
-      )
-      return
-    }
+    setBusy(true)
     try {
-      const dirHandle = await window.showDirectoryPicker({ mode: 'read' })
-      setProgress({ done: 0, total: 0, current: 'scanning...' })
-      await loadDirHandleIntoFs(dirHandle, setProgress)
-      const adapter = createLocalAdapter()
-      const branches = await adapter.listBranches().catch(() => [])
-      if (branches.length === 0) {
-        throw new Error('No git refs found. Pick the repo root (the folder containing .git).')
+      const path = await openDialog({
+        directory: true,
+        multiple: false,
+        title: 'Pick repo folder (containing .git)',
+      })
+      if (!path) {
+        setBusy(false)
+        return
       }
-      setProgress(null)
-      onLoaded(adapter)
-    } catch (err) {
-      setProgress(null)
-      if (err && err.name === 'AbortError') return // user cancelled picker
-      setError(err.message || String(err))
-    }
-  }
-
-  async function handleDirChange(event) {
-    setError('')
-    const files = event.target.files
-    if (!files || files.length === 0) return
-    try {
-      setProgress({ done: 0, total: files.length, current: '' })
-      await loadFilesIntoFs(files, setProgress)
-      const adapter = createLocalAdapter()
-      const branches = await adapter.listBranches().catch(() => [])
+      setPickedPath(path)
+      await openRepo(path)
+      const adapter = createTauriAdapter()
+      const branches = await adapter.listBranches()
       if (branches.length === 0) {
         throw new Error(
-          'No git refs found via webkitdirectory (Chrome usually skips .git folders). Try the "Choose folder (modern)" button above.',
+          'No git refs found. Pick the repo root (the folder containing .git).',
         )
       }
-      setProgress(null)
+      setBusy(false)
       onLoaded(adapter)
     } catch (err) {
-      setProgress(null)
+      setBusy(false)
       setError(err.message || String(err))
     }
   }
@@ -110,59 +84,14 @@ export default function RepoLoader({ onLoaded }) {
         <div className="mode-body">
           <p className="hint">
             Pick the folder that contains <code>.git</code> (your repo root).
-            All files stay in the browser; nothing is uploaded.
+            Reads directly from disk through the Tauri backend - no upload, no sandbox copy.
           </p>
-          {hasFSA && (
-            <button onClick={handleFSAPick}>
-              Choose folder (modern · reads .git reliably)
-            </button>
-          )}
-          <button onClick={() => inputRef.current?.click()} className="alt-btn">
-            Choose folder (legacy · webkitdirectory · may skip .git)
+          <button onClick={handlePickFolder} disabled={busy}>
+            {busy ? 'Opening...' : 'Choose folder'}
           </button>
-          <input
-            ref={inputRef}
-            type="file"
-            webkitdirectory=""
-            directory=""
-            multiple
-            style={{ display: 'none' }}
-            onChange={handleDirChange}
-          />
-          {progress && (
-            <div className="progress">
-              <div>
-                Loading {progress.done}
-                {progress.total ? ` / ${progress.total}` : ''}
-                {typeof progress.bytes === 'number' ? ` · ${fmtBytes(progress.bytes)}` : ''}
-              </div>
-              {progress.current && (
-                <div className="progress-current">
-                  {progress.current}
-                  {typeof progress.currentBytes === 'number' && progress.currentBytes > 1024 * 1024
-                    ? ` (${fmtBytes(progress.currentBytes)})`
-                    : ''}
-                </div>
-              )}
-              {(progress.largeFiles > 0 || progress.slowFiles > 0 || progress.skipped > 0) && (
-                <div className="progress-flags">
-                  {progress.largeFiles > 0 && (
-                    <span className="flag large" title="files > 5MB">
-                      {progress.largeFiles} large
-                    </span>
-                  )}
-                  {progress.slowFiles > 0 && (
-                    <span className="flag slow" title="single-write > 200ms">
-                      {progress.slowFiles} slow
-                    </span>
-                  )}
-                  {progress.skipped > 0 && (
-                    <span className="flag skipped" title="skipped: >100MB or error">
-                      {progress.skipped} skipped
-                    </span>
-                  )}
-                </div>
-              )}
+          {pickedPath && !busy && (
+            <div className="progress-current" style={{ marginTop: 6, opacity: 0.7 }}>
+              {pickedPath}
             </div>
           )}
         </div>
