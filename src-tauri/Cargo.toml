@@ -23,7 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tauri-plugin-log = "2"
-gix = "0.73.0"
+gix = { version = "0.73.0", features = ["tree-editor"] }
 tokio = { version = "1.52.3", features = ["full"] }
 tauri-plugin-dialog = "2.7.1"
 chrono = "0.4.44"

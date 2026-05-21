@@ -131,12 +131,111 @@ pub async fn get_commit_detail(
         .find_commit(id)
         .map_err(|e| format!("find_commit: {e}"))?;
     let info = commit_to_info(&commit)?;
-    // 文件 diff 在 P-Tauri-1 第二轮迭代时补 · 当前先返空数组让前端能渲染 commit 头部信息
-    let files: Vec<FileChange> = vec![];
+
+    // new tree = commit 的 tree
+    let new_tree_id = commit
+        .tree_id()
+        .map_err(|e| format!("tree_id: {e}"))?
+        .detach();
+    let new_tree = repo
+        .find_tree(new_tree_id)
+        .map_err(|e| format!("find_tree new: {e}"))?;
+
+    // old tree = parent commit 的 tree (root commit 用 empty_tree)
+    let parents: Vec<_> = commit.parent_ids().collect();
+    let old_tree = if let Some(parent_id) = parents.first() {
+        let pcommit = repo
+            .find_commit(parent_id.detach())
+            .map_err(|e| format!("find_commit parent: {e}"))?;
+        let pt_id = pcommit
+            .tree_id()
+            .map_err(|e| format!("parent tree_id: {e}"))?
+            .detach();
+        repo.find_tree(pt_id)
+            .map_err(|e| format!("find_tree parent: {e}"))?
+    } else {
+        repo.empty_tree()
+    };
+
+    // tree diff old → new
+    let mut files: Vec<FileChange> = Vec::new();
+    let mut platform = new_tree
+        .changes()
+        .map_err(|e| format!("changes: {e}"))?;
+
+    platform
+        .for_each_to_obtain_tree(&old_tree, |change| {
+            use gix::object::tree::diff::Change;
+            match change {
+                Change::Addition {
+                    location,
+                    id,
+                    entry_mode,
+                    ..
+                } => {
+                    if entry_mode.is_blob() {
+                        let new_text = read_blob_utf8(&repo, id.detach());
+                        files.push(FileChange {
+                            path: location.to_string(),
+                            status: "add".into(),
+                            old_text: String::new(),
+                            new_text,
+                        });
+                    }
+                }
+                Change::Deletion {
+                    location,
+                    id,
+                    entry_mode,
+                    ..
+                } => {
+                    if entry_mode.is_blob() {
+                        let old_text = read_blob_utf8(&repo, id.detach());
+                        files.push(FileChange {
+                            path: location.to_string(),
+                            status: "remove".into(),
+                            old_text,
+                            new_text: String::new(),
+                        });
+                    }
+                }
+                Change::Modification {
+                    location,
+                    previous_id,
+                    id,
+                    entry_mode,
+                    ..
+                } => {
+                    if entry_mode.is_blob() {
+                        let old_text = read_blob_utf8(&repo, previous_id.detach());
+                        let new_text = read_blob_utf8(&repo, id.detach());
+                        files.push(FileChange {
+                            path: location.to_string(),
+                            status: "modify".into(),
+                            old_text,
+                            new_text,
+                        });
+                    }
+                }
+                Change::Rewrite { .. } => {
+                    // rename detection 默认未开 · 此分支不会触发
+                }
+            }
+            Ok::<_, std::convert::Infallible>(gix::object::tree::diff::Action::Continue)
+        })
+        .map_err(|e| format!("for_each_to_obtain_tree: {e}"))?;
+
     Ok(CommitDetail {
         commit: info,
         files,
     })
+}
+
+fn read_blob_utf8(repo: &gix::Repository, oid: gix::ObjectId) -> String {
+    match repo.find_blob(oid) {
+        Ok(blob) => String::from_utf8_lossy(&blob.data).to_string(),
+        Err(_) => String::new(),
+    }
 }
 
 #[tauri::command]

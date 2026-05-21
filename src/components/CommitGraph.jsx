@@ -23,6 +23,17 @@ const MAIN_COLOR = '#10b981'
 const IF_COLORS = ['#f59e0b', '#fbbf24', '#fb923c', '#facc15', '#eab308']
 const SELECTED_DOT = '#fde047' // 当前选中 commit 高亮 yellow-300
 
+const ORIENTATION_STORAGE_KEY = 'gitviz.graphOrientation'
+
+function loadOrientation() {
+  try {
+    const v = localStorage.getItem(ORIENTATION_STORAGE_KEY)
+    return v === 'horizontal' ? 'horizontal' : 'vertical'
+  } catch {
+    return 'vertical'
+  }
+}
+
 function colorForBranch(name, ifIndex) {
   if (isIfBranch(name)) return IF_COLORS[ifIndex % IF_COLORS.length]
   return MAIN_COLOR
@@ -55,6 +66,18 @@ export default function CommitGraph({ adapter, onSelect, selectedOid, refreshKey
   const [tags, setTags] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [orientation, setOrientation] = useState(loadOrientation)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ORIENTATION_STORAGE_KEY, orientation)
+    } catch {
+      // localStorage 不可用时静默
+    }
+  }, [orientation])
+
+  const graphOrientation =
+    orientation === 'horizontal' ? Orientation.Horizontal : Orientation.VerticalReverse
 
   useEffect(() => {
     let cancelled = false
@@ -156,16 +179,65 @@ export default function CommitGraph({ adapter, onSelect, selectedOid, refreshKey
     return map
   }, [branches, tags])
 
-  if (loading) return <div className="loading">Reading commits...</div>
-  if (error) return <div className="error">{error}</div>
-  if (commits.length === 0) return <div className="empty">No commits.</div>
+  const toolbar = (
+    <div className="commit-graph-toolbar">
+      <span className="toolbar-label">时间线</span>
+      <div className="toolbar-group">
+        <button
+          type="button"
+          className={orientation === 'vertical' ? 'tool active' : 'tool'}
+          onClick={() => setOrientation('vertical')}
+          title="commits 由下往上展开（默认）"
+        >
+          竖
+        </button>
+        <button
+          type="button"
+          className={orientation === 'horizontal' ? 'tool active' : 'tool'}
+          onClick={() => setOrientation('horizontal')}
+          title="commits 从左往右展开（横向）"
+        >
+          横
+        </button>
+      </div>
+      {selectedOid && (
+        <span className="toolbar-selected">
+          看的是 <code>{selectedOid.slice(0, 7)}</code>
+        </span>
+      )}
+    </div>
+  )
+
+  if (loading)
+    return (
+      <div className={`commit-graph commit-graph-${orientation}`}>
+        {toolbar}
+        <div className="loading">Reading commits...</div>
+      </div>
+    )
+  if (error)
+    return (
+      <div className={`commit-graph commit-graph-${orientation}`}>
+        {toolbar}
+        <div className="error">{error}</div>
+      </div>
+    )
+  if (commits.length === 0)
+    return (
+      <div className={`commit-graph commit-graph-${orientation}`}>
+        {toolbar}
+        <div className="empty">No commits.</div>
+      </div>
+    )
 
   return (
-    <div className="commit-graph">
+    <div className={`commit-graph commit-graph-${orientation}`}>
+      {toolbar}
       <Gitgraph
+        key={orientation}
         options={{
           template,
-          orientation: Orientation.VerticalReverse,
+          orientation: graphOrientation,
         }}
       >
         {(gitgraph) => {
