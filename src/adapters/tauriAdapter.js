@@ -70,9 +70,14 @@ export function createTauriAdapter() {
 
     async exportBranchAsBundle(branchName) {
       const r = await invoke('export_bundle', { branch: branchName })
+      // P-Tauri-1.3 走 loose-objects 路径而非 packfile (gix-pack low-level 太复杂)
+      // 每个 object 是 zlib-compressed 的 git loose object format
+      // path 形如 "ab/cdef..." 直接对应 .git/objects/ 布局
       return {
-        packfile: new Uint8Array(r.packfile),
-        packname: r.packname,
+        objects: r.objects.map((o) => ({
+          path: o.path,
+          bytes: new Uint8Array(o.bytes),
+        })),
         ref: r.refName,
         headOid: r.headOid,
       }

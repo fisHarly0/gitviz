@@ -1299,6 +1299,7 @@ name = "gitviz"
 version = "0.2.0"
 dependencies = [
  "chrono",
+ "flate2",
  "gix",
  "log",
  "serde",

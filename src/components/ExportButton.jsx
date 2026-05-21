@@ -22,18 +22,22 @@ export default function ExportButton({ adapter, branchName }) {
     setBusy(true)
     setError('')
     try {
-      const { packfile, packname, ref, headOid } = await adapter.exportBranchAsBundle(branchName)
+      const { objects, ref, headOid } = await adapter.exportBranchAsBundle(branchName)
       const JSZip = await getJSZip()
       const zip = new JSZip()
-      // 标准 git dir layout（最小子集）
-      zip.file(`objects/pack/${packname}`, packfile)
+      // 标准 git dir layout（loose objects 布局 · 2+38 hash 字符 path 分割）
+      let totalBytes = 0
+      for (const o of objects) {
+        zip.file(`objects/${o.path}`, o.bytes)
+        totalBytes += o.bytes.byteLength
+      }
       zip.file(`refs/heads/${ref}`, headOid + '\n')
       zip.file('HEAD', `ref: refs/heads/${ref}\n`)
       zip.file(
         'README.txt',
         `gitviz exported if-line: ${ref}
 HEAD: ${headOid}
-packfile: ${packname} (${packfile.byteLength} bytes)
+objects: ${objects.length} loose objects (${totalBytes} bytes total, zlib-compressed)
 
 == Import into your real git repo ==
 
@@ -51,10 +55,11 @@ packfile: ${packname} (${packfile.byteLength} bytes)
      git push origin ${ref}-imported
 
 Notes:
-- git will auto-build the pack .idx on first fetch (no need to ship it).
-- If 'git fetch' complains about missing objects, run:
-     cd /tmp/gitviz-import && git index-pack objects/pack/${packname}
-  then retry the fetch.
+- 用 loose objects 格式（每个 git object 一个文件 in objects/ab/cdef.../）
+  git fetch 会自动找它们，不需要 .idx
+- 如果 'git fetch' 报缺 object，检查 objects/ 下文件数 = ${objects.length}
+- 想转成 packfile 节省空间，可在 import 后跑：
+     cd /path/to/real/repo && git gc --aggressive
 `,
       )
       const blob = await zip.generateAsync({ type: 'blob' })
