@@ -37,6 +37,7 @@ pub fn run() {
             commands::branch::write_file,
             commands::branch::add_and_commit,
             commands::export::export_bundle,
+            commands::export::save_export_zip,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -125,6 +125,15 @@ fn collect_tree_recursive(
     Ok(())
 }
 
+/// 把前端打好的 zip bytes 写到用户选定的 path (dialog.save 拿来的)
+/// Tauri 2 webview 不支持浏览器 a.click + blob URL 下载,
+/// 所以前端先 dialog.save 拿 path, 再 invoke 这条命令把 bytes 落盘。
+/// capability 只放 dialog:allow-save, 不开 fs:* 通用写入。
+#[tauri::command]
+pub async fn save_export_zip(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    std::fs::write(&path, &bytes).map_err(|e| format!("write {path}: {e}"))
+}
+
 /// 把 raw object data 编码成 loose object format: zlib_deflate(<kind> <size>\0<data>)
 fn encode_loose(kind: &str, data: &[u8]) -> Result<Vec<u8>, String> {
     let header = format!("{} {}\0", kind, data.len());

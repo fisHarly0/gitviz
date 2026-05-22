@@ -1,10 +1,11 @@
-// 导出 if 分支为 .zip 含 git pack + ref + import README
-// 用户解压到任意目录后 git fetch 进真仓库即可（README 含命令模板）
+// 导出 if 分支为 .zip 含 git loose objects + ref + HEAD + README
+// 解压后 git fetch 进真仓库即可（README 含命令模板）
 
 import { useState } from 'react'
+import { save } from '@tauri-apps/plugin-dialog'
+import { invoke } from '@tauri-apps/api/core'
 
 async function getJSZip() {
-  // 动态 import 减少首屏包
   const mod = await import('jszip')
   return mod.default || mod
 }
@@ -23,9 +24,19 @@ export default function ExportButton({ adapter, branchName }) {
     setError('')
     try {
       const { objects, ref, headOid } = await adapter.exportBranchAsBundle(branchName)
+
+      // 先弹保存对话框, 用户取消就直接退出
+      const targetPath = await save({
+        defaultPath: `${ref}.zip`,
+        filters: [{ name: 'Zip Archive', extensions: ['zip'] }],
+      })
+      if (!targetPath) {
+        setBusy(false)
+        return
+      }
+
       const JSZip = await getJSZip()
       const zip = new JSZip()
-      // 标准 git dir layout（loose objects 布局 · 2+38 hash 字符 path 分割）
       let totalBytes = 0
       for (const o of objects) {
         zip.file(`objects/${o.path}`, o.bytes)
@@ -62,16 +73,9 @@ Notes:
      cd /path/to/real/repo && git gc --aggressive
 `,
       )
-      const blob = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${ref}.zip`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      // 延迟 revoke 让浏览器下载完
-      setTimeout(() => URL.revokeObjectURL(url), 4000)
+      const zipBytes = await zip.generateAsync({ type: 'uint8array' })
+      // Tauri 2 webview 不接 a.click + blob URL 下载, 必须走 dialog.save + Rust 写盘
+      await invoke('save_export_zip', { path: targetPath, bytes: Array.from(zipBytes) })
     } catch (err) {
       setError(err?.message || String(err))
     } finally {
