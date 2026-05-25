@@ -24,4 +24,8 @@ dist-ssr
 *.sw?
 
 # 项目档案目录 (本地协作记忆 · 不上 git · 用户拖整个目录可带 · 见 D:\real-vibecoding-harries\操作手册\项目档案-标准5件套格式.md)
+# Environment
+.env
+.env.*
+
 gitviz-档案/
