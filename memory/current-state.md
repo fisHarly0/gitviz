@@ -1,12 +1,12 @@
 # 当前状态 / Current State
 
-更新时间：2026-10-04
+更新时间：2026-10-05
 
 ## 当前目标：公开产品交付
 
 用户在 0.2.0 推送后授权持续完善至公开产品交付标准。验收入口：`spec/modules/public-product.md`；决策：`docs/decisions/2026-10-04-public-product.md`。基线 main / decad8e，开始时工作树干净。先统一桌面真实 Git 写入与失败恢复，再完善地图概览/折叠和发布 CI。以下 0.2.0 记录为已完成基线，不代表当前完整目标已达成。
 
-2026-10-05 首批桌面写入加固已实现并通过 6 组真实 Git 测试和原生 UI 流程；当前接续见 `memory/handoff-2026-10-05-public-product-p1.md`。新 prepare/execute/cancel 替换旧不安全写入口，当前尚缺操作记录/继续处理 UI、桌面 restore/worktree 入口、外部状态同步及后续 P2/P3；持续推进，目标未完成。
+2026-10-05 桌面写入加固后，已接通建分支、独立 worktree、恢复新提交及结果/备份提示，刷新同步实际 HEAD 和全部本地分支；编辑期间不重置保存基准。当前接续见 `memory/handoff-2026-10-05-desktop-actions.md`，首批写入背景见 `memory/handoff-2026-10-05-public-product-p1.md`。当前仍缺操作记录/继续处理 UI、应用关闭保护及后续 P2/P3；持续推进，公开产品目标未完成。
 
 - 项目定位：游戏存档式 Git 可视化。现有 Tauri 2 + Rust(gix) 桌面应用，以及 VS Code / DSH 交互式版本树插件。
 - 当前状态：0.2.0 三端大历史地图已完成；桌面原生 / VS Code / DSH 均通过 10000 条实机检查，Node / Rust 的 2000/5000/10000 历史测试通过。三个本地包及 SHA-256 位于 artifacts/。旧桌面写入、if 导出、diff 和 GitHub 只读浏览保留；MSI/NSIS 安装包尚未完成。

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import RepoLoader from './components/RepoLoader.jsx'
@@ -12,6 +12,7 @@ import { openRepo, createTauriAdapter } from './adapters/tauriAdapter.js'
 import './App.css'
 import OperationDialog from './components/OperationDialog.jsx'
 import useOperationDialog from './state/useOperationDialog.js'
+import DesktopActions from './components/DesktopActions.jsx'
 
 export default function App() {
   const desktop = isTauri()
@@ -20,8 +21,22 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0) // commit 后 ++ 触发 CommitGraph 重新拉
   const [dragOver, setDragOver] = useState(false)
   const [dropError, setDropError] = useState('')
+  const [repoSnapshot, setRepoSnapshot] = useState(null)
   const session = useSession()
   const operation = useOperationDialog()
+  const runOperation = operation.run, confirmOperation = operation.confirm
+  const setupRepo = session.setupRepo
+  const acceptAdapter = useCallback(a => {
+    setupRepo([], null, '')
+    setRepoSnapshot(null); setBranches([]); setRefreshKey(0); setDropError(''); setAdapter(a)
+  }, [setupRepo])
+  const openLocalPath = useCallback(async path => {
+    if (session.editingFile) throw new Error('请先完成或取消当前编辑，再打开其他仓库。')
+    return runOperation(async () => {
+      const info = await openRepo(path)
+      acceptAdapter(createTauriAdapter({ repo: info.path, confirm: confirmOperation, run: runOperation }))
+    })
+  }, [session.editingFile, runOperation, confirmOperation, acceptAdapter])
 
   // 整窗口拖放：拖任意文件夹进窗口 → 自动 openRepo 切换 adapter
   useEffect(() => {
@@ -43,15 +58,7 @@ export default function App() {
             const picked = paths[0]
             try {
               if (session.editingFile || operation.busy) throw new Error('请先完成当前操作或取消编辑，再打开其他仓库。')
-              const info = await openRepo(picked)
-              const a = createTauriAdapter({ repo: info.path, confirm: operation.confirm, run: operation.run })
-              const refs = await a.listBranches()
-              if (refs.length === 0) {
-                throw new Error('No git refs found. Drop the repo root (the folder containing .git).')
-              }
-              setRefreshKey(0)
-              setAdapter(a)
-              setDropError('')
+              await openLocalPath(picked)
             } catch (err) {
               setDropError(err.message || String(err))
             }
@@ -66,11 +73,11 @@ export default function App() {
       disposed = true
       if (typeof unlisten === 'function') unlisten()
     }
-  }, [desktop, session.editingFile, operation.confirm, operation.run, operation.busy])
+  }, [desktop, session.editingFile, operation.busy, openLocalPath])
 
   // 拉 branches 列表 + 选 main · adapter 切换 OR 用户 commit 后都要重拉
   useEffect(() => {
-    if (!adapter) return
+    if (!adapter || adapter.historyRequest) return
     let cancelled = false
     Promise.all([
       adapter.listBranches(),
@@ -115,11 +122,7 @@ export default function App() {
           <p className="tagline">{desktop ? 'Preview past commits, then create an if-line to experiment.' : 'Explore branches and changes in a GitHub repository.'}</p>
           {desktop && <p className="drop-hint">Tip: drop a repository folder here to open it.</p>}
         </header>
-        <RepoLoader desktop={desktop} confirm={operation.confirm} run={operation.run} onLoaded={(a) => {
-          setRefreshKey(0)
-          setDropError('')
-          setAdapter(a)
-        }} />
+        <RepoLoader desktop={desktop} confirm={operation.confirm} run={operation.run} onLoaded={acceptAdapter} />
         {dropError && <div className="error drop-error">{dropError}</div>}
         {dragOver && <div className="drop-overlay">Drop folder to open</div>}
       </div>
@@ -149,6 +152,7 @@ export default function App() {
         <div className="source-info">
           Source: {adapter.kind()}
           {adapter.spec ? ` (${adapter.spec.owner}/${adapter.spec.repo})` : ''}
+          {adapter.repo && <span className="source-repo-path" title={adapter.repo}>{adapter.repo}</span>}
           <button
             className="switch"
             disabled={Boolean(session.editingFile) || operation.busy}
@@ -179,6 +183,8 @@ export default function App() {
             adapter={adapter}
             headOid={session.headOid}
             editing={Boolean(session.editingFile) || operation.busy}
+            dirty={Boolean(repoSnapshot?.dirty)}
+            onRefresh={handleCommitted}
             onSwitched={(name, oid) => { session.switchToBranch(name, oid); handleCommitted() }}
           />
           <CommitGraph
@@ -186,10 +192,32 @@ export default function App() {
             onSelect={oid => { if (!session.editingFile && !operation.busy) onSelectCommit(oid) }}
             selectedOid={session.viewingOid}
             refreshKey={refreshKey}
+            editing={Boolean(session.editingFile)}
+            blocked={operation.busy}
+            onSnapshot={snapshot => {
+              setRepoSnapshot(snapshot)
+              setBranches(snapshot.branches.filter(ref => !ref.remote))
+              session.syncSnapshot(snapshot)
+            }}
           />
         </section>
         <section className="detail-pane">
+          {adapter.kind() === 'local' && <DesktopActions
+            key={`actions-${adapter.historyId}`}
+            adapter={adapter}
+            oid={session.viewingOid}
+            snapshot={repoSnapshot}
+            blocked={Boolean(session.editingFile) || operation.busy}
+            editing={Boolean(session.editingFile)}
+            onRefresh={handleCommitted}
+            onOpenWorktree={openLocalPath}
+            onResult={(result, action) => {
+              if (action === 'restore') session.switchToBranch(result.branch, result.head)
+              handleCommitted()
+            }}
+          />}
           <CommitDetail
+            key={`detail-${adapter.historyId || `${adapter.spec?.owner}/${adapter.spec?.repo}`}`}
             adapter={adapter}
             oid={session.viewingOid}
             session={session}

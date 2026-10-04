@@ -164,7 +164,20 @@ fn validate(root: &Path, expected: &Expected, action: &Action) -> Result<Value, 
         Action::CreateBranch { .. } => "增加分支引用，当前工作文件保持不变。",
         Action::CreateWorktree { .. } => "新建独立工作目录，原工作目录保持不变。",
     };
-    Ok(json!({"impact":impact,"files":files,"target":target,"expected":expected}))
+    let (title, confirm_label) = match action {
+        Action::CreateBranch { .. } => ("创建分支", "确认创建分支"),
+        Action::CreateWorktree { .. } => ("从此存档创建试验工作区", "确认创建工作区"),
+        Action::Restore { .. } => ("恢复此存档", "备份并恢复"),
+        _ => ("确认 Git 操作", "确认操作"),
+    };
+    let mut preview = json!({"title":title,"confirmLabel":confirm_label,"impact":impact,"files":files,"target":target,"expected":expected});
+    match action {
+        Action::SwitchBranch { name } | Action::CreateBranch { name, .. } | Action::ForkEdit { name, .. } | Action::CreateWorktree { name, .. } => { preview["branchName"] = json!(name); }
+        _ => {}
+    }
+    if let Action::CreateWorktree { directory, .. } = action { preview["directory"] = json!(directory); }
+    preview["filesLabel"] = json!(if matches!(action, Action::CreateBranch { .. } | Action::CreateWorktree { .. }) { "目标存档与当前 HEAD 的差异（原目录不变）" } else { "将更新的文件" });
+    Ok(preview)
 }
 
 struct OperationLock(PathBuf);
@@ -362,6 +375,25 @@ mod tests {
         assert_eq!(git(&f.root, &["rev-parse", "HEAD^"]).unwrap().trim(), f.latest);
         assert_eq!(git(&f.root, &["rev-parse", "HEAD^{tree}"]).unwrap(), git(&f.root, &["rev-parse", &format!("{}^{{tree}}", f.first)]).unwrap());
         assert_eq!(git(&f.root, &["rev-parse", restored["backup"].as_str().unwrap()]).unwrap().trim(), f.latest);
+    }
+    #[test]
+    fn branch_and_worktree_previews_name_the_target_and_preserve_dirty_original() {
+        let f = Fixture::new(); let mut ops = Operations::default();
+        fs::write(f.root.join("中文.txt"), "unsaved original\n").unwrap();
+        let directory = f.root.parent().unwrap().join("试验 空格").to_string_lossy().into_owned();
+        let plan = ops.prepare(&f.root, f.expected(), Action::CreateWorktree { name: "trial-ui".into(), oid: f.first.clone(), directory: directory.clone() }).unwrap();
+        assert_eq!(plan["target"], f.first); assert_eq!(plan["branchName"], "trial-ui"); assert_eq!(plan["directory"], directory);
+        assert_eq!(plan["confirmLabel"], "确认创建工作区");
+        assert!(plan["filesLabel"].as_str().unwrap().contains("原目录不变"));
+        assert!(git(&f.root, &["show-ref", "--verify", "refs/heads/trial-ui"]).is_err());
+        let result = ops.execute(&f.root, plan["token"].as_str().unwrap()).unwrap();
+        assert_eq!(head(&f.root).unwrap(), f.latest); assert_eq!(branch(&f.root), "main");
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "unsaved original\n");
+        assert_eq!(fs::read_to_string(Path::new(result["worktree"].as_str().unwrap()).join("中文.txt")).unwrap(), "first\n");
+        let plan = ops.prepare(&f.root, f.expected(), Action::CreateBranch { name: "named-branch".into(), oid: f.first.clone() }).unwrap();
+        assert_eq!(plan["branchName"], "named-branch"); assert_eq!(plan["confirmLabel"], "确认创建分支");
+        ops.execute(&f.root, plan["token"].as_str().unwrap()).unwrap();
+        assert_eq!(head(&f.root).unwrap(), f.latest); assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "unsaved original\n");
     }
     #[test]
     fn hook_failure_retains_editor_content_and_original_head() {

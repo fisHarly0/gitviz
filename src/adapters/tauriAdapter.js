@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { ADAPTER_KIND } from './RepoAdapter.js'
 
 export async function openRepo(path) {
@@ -13,6 +14,7 @@ export function createTauriAdapter({ repo, confirm, run } = {}) {
   /** @type {import('./RepoAdapter.js').RepoAdapter} */
   const adapter = {
     kind: () => ADAPTER_KIND.LOCAL,
+    repo,
     historyId: crypto.randomUUID(),
     confirmDiscard: () => confirm({ title: '放弃当前编辑？', impact: '尚未保存到磁盘的编辑内容将丢弃。已经创建的分支和已保存的文件会保留。', confirmLabel: '放弃编辑' }),
 
@@ -54,6 +56,10 @@ export function createTauriAdapter({ repo, confirm, run } = {}) {
         if (!await confirm(plan)) { await request('desktop_cancel', { token: plan.token }); return { cancelled: true } }
         return request('desktop_execute', { token: plan.token })
       })
+    },
+
+    async chooseWorktreeParent() {
+      return run(() => openDialog({ directory: true, multiple: false, title: '选择试验工作区的父目录' }))
     },
 
     async checkout(name, expected) {

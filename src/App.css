@@ -98,6 +98,7 @@ code {
   gap: 12px;
   color: var(--text-dim);
 }
+.source-repo-path { max-width: min(42vw, 600px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 
 .app.start {
   align-items: center;
@@ -642,6 +643,8 @@ code {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  max-height: 128px;
+  overflow: auto;
 }
 .if-lines-row .lbl {
   font-size: 10px;
@@ -663,6 +666,8 @@ code {
   border-style: solid;
   cursor: pointer;
   transition: background 0.12s;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .branch-chip .dot {
   width: 7px;

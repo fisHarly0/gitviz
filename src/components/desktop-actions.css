@@ -1,0 +1,20 @@
+.desktop-actions { padding: 16px 18px; border-bottom: 1px solid var(--border); background: var(--bg-elev); flex-shrink: 0; }
+.desktop-action-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.desktop-action-heading h2 { font-size: 14px; margin: 0; }
+.desktop-action-heading span, .desktop-action-hint { color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+.desktop-action-hint { margin: 10px 0 0; }
+.desktop-action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.desktop-actions button { min-height: 36px; }
+.desktop-action-form { display: grid; gap: 14px; margin-top: 18px; max-width: 600px; }
+.desktop-action-form label { display: grid; gap: 6px; font-size: 13px; }
+.desktop-action-form input { min-width: 0; }
+.desktop-directory-field { display: flex; gap: 8px; }
+.desktop-directory-field input { flex: 1; }
+.desktop-directory-field button { flex-shrink: 0; }
+.desktop-action-error { color: var(--danger); white-space: pre-wrap; overflow-wrap: anywhere; }
+.desktop-action-result { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; overflow-wrap: anywhere; }
+.desktop-action-result p { margin: 0 0 8px; line-height: 1.6; }
+.desktop-action-result > code { display: block; margin: 8px 0; white-space: pre-wrap; }
+.desktop-action-result button { margin-top: 4px; }
+.detail-pane:has(.desktop-actions) { display: flex; flex-direction: column; overflow: auto; }
+.detail-pane:has(.desktop-actions) .commit-detail { height: auto; min-height: 320px; flex: 1 0 auto; }

@@ -32,12 +32,6 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
       setPickedPath(path)
       const info = await openRepo(path)
       const adapter = createTauriAdapter({ repo: info.path, confirm, run })
-      const branches = await adapter.listBranches()
-      if (branches.length === 0) {
-        throw new Error(
-          'This repository has no local branches. Create a commit in Git first, then open the repository root.',
-        )
-      }
       onLoaded(adapter)
     } catch (err) {
       setError(err.message || String(err))

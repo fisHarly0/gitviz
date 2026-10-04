@@ -54,15 +54,18 @@ pub async fn open_repo(
 ) -> Result<RepoInfo, String> {
     let p = PathBuf::from(&path);
     let repo = open_repo_at(&p)?;
+    let p = repo.workdir().ok_or("请打开包含工作文件的仓库，暂不支持裸仓库。")?.to_path_buf();
+    let branches = list_branches_inner(&repo)?;
+    let head_oid = head_oid_inner(&repo);
+    let current_branch = current_branch_inner(&repo);
+    // Publish the new repository only after all validation and metadata reads
+    // succeed, so a failed open leaves the current frontend/backend pair intact.
     {
         let mut guard = state.lock().map_err(|e| format!("state lock: {e}"))?;
         *guard = Some(RepoState { repo_path: p.clone() });
     }
-    let branches = list_branches_inner(&repo)?;
-    let head_oid = head_oid_inner(&repo);
-    let current_branch = current_branch_inner(&repo);
     Ok(RepoInfo {
-        path,
+        path: p.to_string_lossy().into_owned(),
         branches,
         head_oid,
         current_branch,
