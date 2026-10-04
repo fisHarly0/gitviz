@@ -6,7 +6,7 @@
 | DSH 版本树插件 | `extensions/dsh/` | 已在 DSH 0.2.0-rc.2 Web 验证；见 [dsh-plugin.md](dsh-plugin.md) |
 | 仓库浏览 | `src-tauri/src/commands/repo.rs`、`src/adapters/tauriAdapter.js` | 已实现 |
 | Preview/Edit 状态机 | `src/state/`、`src/components/` | 已实现 |
-| 分支写入 | `src-tauri/src/commands/branch.rs` | 已实现 |
+| 桌面 Git 写入 | `src-tauri/src/commands/operations.rs` | 已替换旧接口，真实 Git 回归及原生 UI 通过；公开产品验收见 [public-product.md](public-product.md) |
 | if 分支导出 | `src-tauri/src/commands/export.rs` | 已实现 |
 | GitHub 只读 | `src/adapters/githubAdapter.js` | 已实现 |
 | 启动与仓库加载 | `src/App.jsx`、`src/components/RepoLoader.jsx`、`src/state/useSession.js` | 桌面/浏览器分流、加载防重、会话重置、只读提示；见 `docs/decisions/2026-10-04-startup-and-loading.md` |

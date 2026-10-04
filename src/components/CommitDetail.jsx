@@ -75,6 +75,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
   const [error, setError] = useState('')
   const [activeFile, setActiveFile] = useState(null)
   const [editError, setEditError] = useState('')
+  const [editBusy, setEditBusy] = useState(false)
 
   useEffect(() => {
     if (!oid) return
@@ -117,10 +118,11 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
     !!session &&
     (session.mode === 'preview' || session.mode === 'edit') &&
     adapter.kind() === 'local' &&
-    typeof adapter.createBranch === 'function'
+    typeof adapter.forkEdit === 'function'
 
   const handleEdit = async (filepath) => {
-    if (!session) return
+    if (!session || editBusy) return
+    setEditBusy(true)
     setEditError('')
     try {
       let ifBranchName = session.currentIfBranch
@@ -128,21 +130,24 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
       if (session.mode === 'preview' || !ifBranchName) {
         const counter = session.allocateIfCounter()
         ifBranchName = makeIfBranchName(oid.slice(0, 7), counter)
-        await adapter.createBranch(ifBranchName, oid)
-        await adapter.checkout(ifBranchName)
+        const result = await adapter.forkEdit(ifBranchName, oid, { head: session.headOid, branch: session.currentBranch })
+        if (result.cancelled) return
+        session.startEdit(filepath, result.branch, result.head)
+        onCommitted?.()
+        return
       }
       session.startEdit(filepath, ifBranchName)
     } catch (err) {
       setEditError(err?.message || String(err))
-    }
+    } finally { setEditBusy(false) }
   }
 
   const handleSaveCommit = async (newContent, commitMsg) => {
     const filepath = session.editingFile
     if (!filepath) throw new Error('no editing file')
-    await adapter.writeFile(filepath, newContent)
-    const newHeadOid = await adapter.addAndCommit(filepath, commitMsg)
-    session.onCommitInIf(newHeadOid)
+    const result = await adapter.saveEdit(filepath, newContent, commitMsg, { head: session.headOid, branch: session.currentBranch })
+    if (result.cancelled) return { cancelled: true }
+    session.onCommitInIf(result.head)
     if (onCommitted) onCommitted()
   }
 
@@ -158,9 +163,10 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
         adapter={adapter}
         filepath={session.editingFile}
         ifBranchName={session.currentIfBranch}
-        sourceOid={oid}
+        sourceOid={session.headOid}
         onSave={handleSaveCommit}
         onCancel={handleCancelEdit}
+        confirm={adapter.confirmDiscard}
       />
     )
   }
@@ -195,6 +201,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
               {canEdit && f.status !== 'remove' && (
                 <button
                   className="edit-file-btn"
+                  disabled={editBusy}
                   onClick={() => handleEdit(f.path)}
                   title={
                     session.mode === 'preview'
@@ -227,7 +234,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
 }
 
 // 进入 edit 模式后异步拉初始内容（从 sourceOid 时刻读文件 · 不是从当前 HEAD）
-function EditEnter({ adapter, filepath, ifBranchName, sourceOid, onSave, onCancel }) {
+function EditEnter({ adapter, filepath, ifBranchName, sourceOid, onSave, onCancel, confirm }) {
   const [initial, setInitial] = useState(null)
   const [error, setError] = useState('')
 
@@ -260,6 +267,7 @@ function EditEnter({ adapter, filepath, ifBranchName, sourceOid, onSave, onCance
       ifBranchName={ifBranchName}
       onSave={onSave}
       onCancel={onCancel}
+      confirm={confirm}
     />
   )
 }

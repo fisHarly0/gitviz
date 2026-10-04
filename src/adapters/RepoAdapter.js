@@ -1,5 +1,5 @@
 /**
- * Shared shape for both local (isomorphic-git) and GitHub (Octokit) adapters.
+ * Shared shape for local Tauri/Git and GitHub (Octokit) adapters.
  * View components depend on these shapes only, never on the concrete adapter.
  *
  * @typedef {Object} Commit
@@ -34,13 +34,13 @@
  * @property {() => string} kind    - "local" or "github"
  *
  * Write methods (local adapter only · github adapter throws or returns null)
- * @property {(name: string, fromOid: string) => Promise<void>} [createBranch]
- * @property {(branchName: string) => Promise<void>} [checkout]
+ * @property {(action: Object, expected: {head: string, branch: string}) => Promise<Object>} [performAction]
+ * @property {(name: string, oid: string, expected: Object) => Promise<Object>} [forkEdit]
+ * @property {(branchName: string, expected: Object) => Promise<Object>} [checkout]
  * @property {() => Promise<string | null>} [currentBranch]
  * @property {() => Promise<string | null>} [headOid]
  * @property {(filepath: string, oid: string) => Promise<string>} [readFileAt]
- * @property {(filepath: string, content: string) => Promise<void>} [writeFile]
- * @property {(filepath: string, message: string, author?: { name: string, email: string }) => Promise<string>} [addAndCommit]
+ * @property {(path: string, content: string, message: string, expected: Object) => Promise<Object>} [saveEdit]
  */
 
 export const ADAPTER_KIND = Object.freeze({ LOCAL: 'local', GITHUB: 'github' })

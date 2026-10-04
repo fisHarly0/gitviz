@@ -13,6 +13,8 @@
 
 ## 大历史版本地图（0.2.0）
 
+当前源码正在推进下一版公开产品交付，完整验收见 [交付清单](spec/modules/public-product.md)。开发版桌面已改用真实 Git 切换与提交，增加操作预览、一次性确认、仓库/HEAD 校验和编辑文件保护；本地保留的旧 0.2.0 安装包不会自动升级。操作记录、失败后继续处理入口和三端完整交互统一仍在开发中。
+
 桌面本地、VS Code、DSH 都支持逐批加载完整的本机可达历史：默认首批 300 条，可继续加载或连续读到末尾，随时停止。全历史搜索覆盖提交标题、作者、OID 和引用名，点结果可加载并定位；地图只渲染视口附近的节点。
 
 点击节点只改变预览，不更换仓库目录，也不改变 HEAD 或工作文件。绿色 HEAD 表示实际位置，选中节点表示正在查看的存档。VS Code / DSH 的明确“切换”或“恢复”操作才修改工作文件，执行前会显示确认。
@@ -82,7 +84,7 @@ gitviz 用"游戏存档"的方式理解 Git：
 | 三端本地大历史地图（0.2.0） | 已完成，2000/5000/10000 条真实 Git 历史及三端 10000 条 UI 验证通过 |
 | VS Code / DSH 插件 | VSIX / tarball 已构建并在隔离配置中安装验证 |
 | 桌面化 MVP（read 路径 + 三态状态机 + 拖放） | 已完成，用户实测通过 |
-| write 路径（create_branch / checkout / write_file / add_and_commit） | 已完成，Edit → Save & Commit 实测起 if 分支成功 |
+| 桌面写入（开发版 prepare / execute） | 真实 Git 分支切换与受保护的编辑提交，6 组真实 Git 测试及原生 UI 流程通过；完整产品验收进行中 |
 | Export 导出 if 分支为 zip（loose objects） | 已完成，git cat-file / fsck / fetch 字节级验证通过 |
 | commit 详情 file diff（side-by-side / patch） | 已完成 |
 | commit 图横 / 竖切换 | 已完成 |
@@ -206,7 +208,8 @@ echo "v3" > a.txt; git commit -am "v3"
 | `src/components/ModeStatusBar.jsx` | 底部状态栏（三态指示） |
 | `src-tauri/src/lib.rs` | Tauri 入口 + 全局状态（Mutex 存 repo_path） |
 | `src-tauri/src/commands/repo.rs` | 读命令（open / list_branches / list_commits / get_commit_detail / read_file_at） |
-| `src-tauri/src/commands/branch.rs` | 写命令（create_branch / checkout / write_file / add_and_commit / current_branch / head_oid） |
+| `src-tauri/src/commands/branch.rs` | 当前分支与 HEAD 查询 |
+| `src-tauri/src/commands/operations.rs` | 桌面操作预览、确认、状态校验、真实 Git 写入与回归测试 |
 | `src-tauri/src/commands/export.rs` | 导出命令（export_bundle loose objects / save_export_zip） |
 | `src-tauri/Cargo.toml` | Rust 依赖（gix / tokio / flate2 / dialog plugin / serde） |
 | `src-tauri/tauri.conf.json` | Tauri 配置（identifier `cn.hlhaya.gitviz`，窗口 1280x800） |
@@ -238,7 +241,7 @@ BROWSE  -- 点旧 commit -->  PREVIEW  -- 点 Edit -->  EDIT
 - **PREVIEW**：查看旧 commit 的文件内容（只读），黄色横幅提示
 - **EDIT**：在 if 分支上编辑文件，编辑器打开
 
-> **本地编辑为实验性功能。** 保存先覆盖工作目录中的目标文件，再创建 Git 对象和提交；切换分支仅修改 HEAD，不同步 index 或其他工作文件。它不是隔离工作树，失败也不保证自动回滚。请在专用测试克隆中使用编辑功能，保留未提交内容的备份。GitHub 模式为只读。
+> **桌面写入仍在公开产品验收阶段。** 当前开发版先预览并确认影响，再通过 Git 同步 HEAD、暂存区和工作文件；保存使用用户配置的身份、钩子与签名。编辑文件采用临时文件替换，拒绝越界、Git 元数据与符号链接路径。提交失败时保留编辑内容和暂存更改，需检查 Git 状态后继续处理。桌面内嵌编辑使用当前工作目录；插件的独立试验使用 worktree。旧 0.2.0 桌面包仍是仅更新 HEAD 的实验性实现，请勿混淆版本。GitHub 模式保持只读。
 
 ### GitHub 模式
 

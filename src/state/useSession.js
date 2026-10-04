@@ -83,12 +83,13 @@ export function useSession() {
   }, [])
 
   // 进 edit 模式：preview 状态下点了某文件 Edit
-  // 调用方 (CommitDetail) 负责调 adapter.createBranch + checkout，本 hook 仅记 UI 状态
-  const startEdit = useCallback((filepath, ifBranchName) => {
+  // 调用方确认并执行 forkEdit，本 hook 只记录后端返回的实际位置。
+  const startEdit = useCallback((filepath, ifBranchName, actualHead) => {
     setMode('edit')
     setEditingFile(filepath)
     setCurrentBranch(ifBranchName)
     setCurrentIfBranch(ifBranchName)
+    if (actualHead) setHeadOid(actualHead)
   }, [])
 
   // 用户 Save & Commit 后调用 · 记录已改文件数 · 保持 edit 模式 (用户可继续改别的文件)
@@ -96,6 +97,7 @@ export function useSession() {
     setChangedFilesInIf((n) => n + 1)
     setEditingFile(null)
     if (newHeadOid) setHeadOid(newHeadOid)
+    if (newHeadOid) setViewingOid(newHeadOid)
   }, [])
 
   // 取下一个 if-line counter（不持久化 · session-scoped）

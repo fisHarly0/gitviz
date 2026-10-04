@@ -1300,6 +1300,7 @@ version = "0.2.0"
 dependencies = [
  "chrono",
  "flate2",
+ "getrandom 0.3.4",
  "gix",
  "log",
  "serde",

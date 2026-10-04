@@ -2,6 +2,7 @@ pub mod branch;
 pub mod export;
 pub mod repo;
 pub mod history;
+pub mod operations;
 
 use crate::SharedRepoState;
 use std::path::PathBuf;

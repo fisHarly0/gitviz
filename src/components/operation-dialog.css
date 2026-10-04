@@ -1,0 +1,11 @@
+.operation-dialog { width: min(560px, calc(100vw - 48px)); max-height: calc(100vh - 64px); overflow: auto; padding: 24px; color: var(--text); background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; }
+.operation-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.operation-dialog h2 { font-size: 20px; margin: 0 0 16px; }
+.operation-dialog h3 { font-size: 14px; margin: 20px 0 8px; }
+.operation-dialog p, .operation-dialog dl { font-size: 14px; line-height: 1.6; }
+.operation-dialog dd { margin: 0 0 12px; overflow-wrap: anywhere; }
+.operation-dialog dt { margin-top: 12px; color: var(--text-dim); }
+.operation-dialog ul { max-height: 180px; overflow: auto; padding-left: 20px; font-size: 13px; overflow-wrap: anywhere; }
+.operation-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.operation-dialog-actions button { min-height: 40px; padding: 8px 16px; }
+.operation-dialog-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

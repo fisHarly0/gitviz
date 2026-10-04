@@ -62,6 +62,7 @@ export default function EditorPanel({
   ifBranchName,
   onSave,
   onCancel,
+  confirm,
 }) {
   const [content, setContent] = useState(initialContent ?? '')
   const [commitMsg, setCommitMsg] = useState('')
@@ -74,7 +75,8 @@ export default function EditorPanel({
     setBusy(true)
     setError('')
     try {
-      await onSave(content, msg)
+      const result = await onSave(content, msg)
+      if (result?.cancelled) return
       setCommitMsg('')
     } catch (err) {
       setError(err?.message || String(err))
@@ -107,7 +109,7 @@ export default function EditorPanel({
           >
             {busy ? 'Committing...' : 'Save & Commit'}
           </button>
-          <button onClick={onCancel} disabled={busy} className="cancel-btn">
+          <button onClick={async () => { if (content === initialContent || await confirm?.()) onCancel() }} disabled={busy} className="cancel-btn">
             Cancel
           </button>
         </div>

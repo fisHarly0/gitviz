@@ -16,6 +16,8 @@ export default function IfLinesPanel({
   mainBranch,
   adapter,
   onSwitched, // (branchName, headOid) => void
+  headOid,
+  editing,
 }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -30,7 +32,10 @@ export default function IfLinesPanel({
     setError('')
     try {
       if (typeof adapter.checkout === 'function') {
-        await adapter.checkout(b.name)
+        const result = await adapter.checkout(b.name, { head: headOid, branch: currentBranch })
+        if (result.cancelled) return
+        onSwitched(result.branch, result.head)
+        return
       }
       onSwitched(b.name, b.oid)
     } catch (err) {
@@ -48,7 +53,7 @@ export default function IfLinesPanel({
           <button
             className={`branch-chip main ${currentBranch === mainBranch ? 'active' : ''}`}
             onClick={() => switchTo(mainRef)}
-            disabled={busy}
+            disabled={busy || editing}
             title={`switch to ${mainBranch} (HEAD = ${short(mainRef.oid)})`}
           >
             <span className="dot" />
@@ -61,7 +66,7 @@ export default function IfLinesPanel({
             key={b.name}
             className={`branch-chip if i${i % 5} ${currentBranch === b.name ? 'active' : ''}`}
             onClick={() => switchTo(b)}
-            disabled={busy}
+            disabled={busy || editing}
             title={`switch to ${b.name} (HEAD = ${short(b.oid)})`}
           >
             <span className="dot" />

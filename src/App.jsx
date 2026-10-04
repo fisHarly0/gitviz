@@ -10,6 +10,8 @@ import IfLinesPanel from './components/IfLinesPanel.jsx'
 import { useSession } from './state/useSession.js'
 import { openRepo, createTauriAdapter } from './adapters/tauriAdapter.js'
 import './App.css'
+import OperationDialog from './components/OperationDialog.jsx'
+import useOperationDialog from './state/useOperationDialog.js'
 
 export default function App() {
   const desktop = isTauri()
@@ -19,6 +21,7 @@ export default function App() {
   const [dragOver, setDragOver] = useState(false)
   const [dropError, setDropError] = useState('')
   const session = useSession()
+  const operation = useOperationDialog()
 
   // 整窗口拖放：拖任意文件夹进窗口 → 自动 openRepo 切换 adapter
   useEffect(() => {
@@ -39,8 +42,9 @@ export default function App() {
             if (paths.length === 0) return
             const picked = paths[0]
             try {
-              await openRepo(picked)
-              const a = createTauriAdapter()
+              if (session.editingFile || operation.busy) throw new Error('请先完成当前操作或取消编辑，再打开其他仓库。')
+              const info = await openRepo(picked)
+              const a = createTauriAdapter({ repo: info.path, confirm: operation.confirm, run: operation.run })
               const refs = await a.listBranches()
               if (refs.length === 0) {
                 throw new Error('No git refs found. Drop the repo root (the folder containing .git).')
@@ -62,7 +66,7 @@ export default function App() {
       disposed = true
       if (typeof unlisten === 'function') unlisten()
     }
-  }, [desktop])
+  }, [desktop, session.editingFile, operation.confirm, operation.run, operation.busy])
 
   // 拉 branches 列表 + 选 main · adapter 切换 OR 用户 commit 后都要重拉
   useEffect(() => {
@@ -111,7 +115,7 @@ export default function App() {
           <p className="tagline">{desktop ? 'Preview past commits, then create an if-line to experiment.' : 'Explore branches and changes in a GitHub repository.'}</p>
           {desktop && <p className="drop-hint">Tip: drop a repository folder here to open it.</p>}
         </header>
-        <RepoLoader desktop={desktop} onLoaded={(a) => {
+        <RepoLoader desktop={desktop} confirm={operation.confirm} run={operation.run} onLoaded={(a) => {
           setRefreshKey(0)
           setDropError('')
           setAdapter(a)
@@ -137,6 +141,7 @@ export default function App() {
 
   return (
     <div className={dragOver ? 'app loaded drag-over' : 'app loaded'}>
+      <OperationDialog request={operation.request} onAnswer={operation.answer}/>
       {dragOver && <div className="drop-overlay">Drop folder to switch repo</div>}
       {dropError && <div className="error drop-error">{dropError}</div>}
       <header className="app-header">
@@ -146,6 +151,7 @@ export default function App() {
           {adapter.spec ? ` (${adapter.spec.owner}/${adapter.spec.repo})` : ''}
           <button
             className="switch"
+            disabled={Boolean(session.editingFile) || operation.busy}
             onClick={() => {
               setAdapter(null)
             }}
@@ -160,7 +166,7 @@ export default function App() {
           viewingOid={session.viewingOid}
           currentBranch={session.currentBranch}
           readOnly={adapter.kind() !== 'local'}
-          onReturn={() => session.leaveToBrowse()}
+            onReturn={() => { if (!operation.busy) session.leaveToBrowse() }}
         />
       )}
 
@@ -171,11 +177,13 @@ export default function App() {
             currentBranch={session.currentBranch}
             mainBranch={session.mainBranch}
             adapter={adapter}
+            headOid={session.headOid}
+            editing={Boolean(session.editingFile) || operation.busy}
             onSwitched={(name, oid) => { session.switchToBranch(name, oid); handleCommitted() }}
           />
           <CommitGraph
             adapter={adapter}
-            onSelect={onSelectCommit}
+            onSelect={oid => { if (!session.editingFile && !operation.busy) onSelectCommit(oid) }}
             selectedOid={session.viewingOid}
             refreshKey={refreshKey}
           />

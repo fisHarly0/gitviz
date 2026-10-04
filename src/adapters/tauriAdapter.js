@@ -5,11 +5,16 @@ export async function openRepo(path) {
   return invoke('open_repo', { path })
 }
 
-export function createTauriAdapter() {
+export function createTauriAdapter({ repo, confirm, run } = {}) {
+  const request = async (command, args) => {
+    try { return await invoke(command, args) }
+    catch (reason) { throw reason instanceof Error ? reason : new Error(String(reason)) }
+  }
   /** @type {import('./RepoAdapter.js').RepoAdapter} */
   const adapter = {
     kind: () => ADAPTER_KIND.LOCAL,
     historyId: crypto.randomUUID(),
+    confirmDiscard: () => confirm({ title: '放弃当前编辑？', impact: '尚未保存到磁盘的编辑内容将丢弃。已经创建的分支和已保存的文件会保留。', confirmLabel: '放弃编辑' }),
 
     async historyRequest(method, params = {}) {
       try {
@@ -42,12 +47,21 @@ export function createTauriAdapter() {
       return []
     },
 
-    async createBranch(name, fromOid) {
-      return invoke('create_branch', { name, fromOid })
+    async performAction(action, expected) {
+      if (!repo || !confirm || !run) throw new Error('仓库会话不完整，请重新打开仓库。')
+      return run(async () => {
+        const plan = await request('desktop_prepare', { action, expected: { ...expected, repo } })
+        if (!await confirm(plan)) { await request('desktop_cancel', { token: plan.token }); return { cancelled: true } }
+        return request('desktop_execute', { token: plan.token })
+      })
     },
 
-    async checkout(branchName) {
-      return invoke('checkout', { branch: branchName })
+    async checkout(name, expected) {
+      return adapter.performAction({ action: 'switchBranch', name }, expected)
+    },
+
+    async forkEdit(name, oid, expected) {
+      return adapter.performAction({ action: 'forkEdit', name, oid }, expected)
     },
 
     async currentBranch() {
@@ -59,25 +73,11 @@ export function createTauriAdapter() {
     },
 
     async readFileAt(filepath, oid) {
-      try {
-        return await invoke('read_file_at', { path: filepath, oid })
-      } catch {
-        return ''
-      }
+      return request('read_file_at', { path: filepath, oid })
     },
 
-    async writeFile(filepath, content) {
-      return invoke('write_file', { path: filepath, content })
-    },
-
-    async addAndCommit(filepath, message, author) {
-      const a = author || { name: 'gitviz-player', email: 'player@gitviz.local' }
-      return invoke('add_and_commit', {
-        path: filepath,
-        message: message || 'gitviz: if-line edit',
-        authorName: a.name,
-        authorEmail: a.email,
-      })
+    async saveEdit(path, content, message, expected) {
+      return adapter.performAction({ action: 'saveEdit', path, content, message }, expected)
     },
 
     async exportBranchAsBundle(branchName) {
