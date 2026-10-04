@@ -1,0 +1,4 @@
+- insert:
+    - id: gitviz
+      name: '@fisharly/gitviz-dsh'
+      config: {}

@@ -1,0 +1,45 @@
+.gitviz-dsh {
+  width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; container-type: inline-size;
+  --vscode-editor-background: var(--dsw-alias-bg-base, #fff);
+  --vscode-sideBar-background: var(--dsw-alias-bg-layer-1, #f6f7f9);
+  --vscode-input-background: var(--dsw-alias-interactive-bg-hover, #eef0f3);
+  --vscode-panel-border: var(--dsw-alias-border-l3, #d6dce3);
+  --vscode-editor-foreground: var(--dsw-alias-label-primary, #20252d);
+  --vscode-descriptionForeground: var(--dsw-alias-label-secondary, #57616c);
+  --vscode-errorForeground: #b42336;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; color: var(--vscode-editor-foreground);
+}
+.gitviz-dsh .version-tree { height: 100%; min-height: 0; --tree-green: #15794d; --tree-amber: #8b5908; --tree-blue: #285caf; --tree-purple: #7950b1; --tree-pink: #a33769; }
+body[data-ds-dark-theme] .gitviz-dsh { --vscode-errorForeground: #ff9d9d; }
+body[data-ds-dark-theme] .gitviz-dsh .version-tree { --tree-green: #5dd9a5; --tree-amber: #f0be69; --tree-blue: #82b6f9; --tree-purple: #b5a3ed; --tree-pink: #eea0c2; }
+.gitviz-dsh .gitviz-dialog { box-sizing: border-box; width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto; padding: 24px; border: 1px solid var(--vscode-panel-border); border-radius: 10px; background: var(--vscode-editor-background); color: inherit; }
+.gitviz-dsh .gitviz-dialog::backdrop { background: rgb(0 0 0 / .35); }
+.gitviz-dsh .gitviz-dialog header, .gitviz-dsh .gitviz-dialog footer { display: flex; gap: 14px; align-items: center; justify-content: space-between; }
+.gitviz-dsh .gitviz-dialog h2 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+.gitviz-dsh .gitviz-dialog button { cursor: pointer; font: inherit; padding: 9px 14px; border-radius: 6px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-input-background); color: inherit; }
+.gitviz-dsh .gitviz-dialog button:hover { filter: brightness(.95); }
+.gitviz-dsh .gitviz-dialog button.gitviz-confirm { color: #fff; background: #15794d; border-color: #15794d; }
+.gitviz-dsh .gitviz-dialog-description { margin: 22px 0; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.gitviz-dsh .gitviz-repo-path { color: var(--vscode-descriptionForeground); font-size: 12px; overflow-wrap: anywhere; }
+.gitviz-dsh .gitviz-dialog label { display: block; margin: 20px 0; font-size: 13px; }
+.gitviz-dsh .gitviz-dialog input { box-sizing: border-box; display: block; width: 100%; margin-top: 8px; padding: 10px; color: inherit; background: var(--vscode-input-background); border: 1px solid var(--vscode-panel-border); border-radius: 5px; font: inherit; caret-color: #15794d; }
+.gitviz-dsh .gitviz-dialog input::placeholder { color: var(--vscode-descriptionForeground); }
+.gitviz-dsh .gitviz-dialog :focus-visible { outline: 2px solid #3977bb; outline-offset: 3px; }
+.gitviz-dsh .gitviz-dialog footer { justify-content: flex-end; margin-top: 24px; }
+.gitviz-dsh .gitviz-diff { width: min(1100px, calc(100vw - 32px)); }
+.gitviz-dsh .gitviz-diff-legend { display: flex; gap: 20px; font-size: 12px; margin: 20px 0 12px; }
+.gitviz-dsh .gitviz-diff-legend code { margin-left: auto; }
+.gitviz-dsh .gitviz-diff-lines { max-height: 60dvh; overflow: auto; border: 1px solid var(--vscode-panel-border); font: 12px/1.65 Consolas, monospace; tab-size: 4; }
+.gitviz-dsh .gitviz-diff-line { display: flex; width: max-content; min-width: 100%; }
+.gitviz-dsh .gitviz-diff-line > span { width: 42px; padding: 0 5px; text-align: right; flex-shrink: 0; opacity: .8; font-variant-numeric: tabular-nums; }
+.gitviz-dsh .gitviz-diff-line > span:nth-child(3) { width: 20px; }
+.gitviz-dsh .gitviz-diff-line pre { margin: 0; padding: 0 16px 0 4px; font: inherit; white-space: pre; }
+.gitviz-dsh .gitviz-diff-line.add { background: color-mix(in srgb, #15794d 14%, transparent); }
+.gitviz-dsh .gitviz-diff-line.remove { background: color-mix(in srgb, #b42336 12%, transparent); }
+@container (max-width: 680px) {
+  .gitviz-dsh .tree-workbench { display: flex; flex-direction: column; overflow: auto; }
+  .gitviz-dsh .tree-map { min-height: 380px; flex: 0 0 55vh; }
+  .gitviz-dsh .node-inspector { border-left: 0; border-top: 1px solid var(--vscode-panel-border); flex-shrink: 0; overflow: visible; }
+  .gitviz-dsh .tree-search { flex-basis: 100%; }
+  .gitviz-dsh .tree-brand > span { display: none; }
+}

@@ -11,6 +11,7 @@ export default function ModeStatusBar({
   currentIfBranch,
   changedFilesInIf,
   headOid,
+  readOnly = false,
 }) {
   let cls = 'mode-status-bar'
   let content
@@ -30,8 +31,8 @@ export default function ModeStatusBar({
       <>
         <span className="tag preview">PREVIEW</span>
         <span>
-          looking at <code>{short(viewingOid)}</code> on <code>{currentBranch}</code> · no changes yet ·
-          edit to fork an if-line
+          looking at <code>{short(viewingOid)}</code> on <code>{currentBranch}</code> ·{' '}
+          {readOnly ? 'read-only GitHub history' : 'edit to fork an if-line'}
         </span>
       </>
     )

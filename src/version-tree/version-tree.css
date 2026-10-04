@@ -1,0 +1,154 @@
+.version-tree {
+  --tree-bg: var(--vscode-editor-background, #0d1117);
+  --tree-panel: var(--vscode-sideBar-background, #151b23);
+  --tree-raised: var(--vscode-input-background, #202935);
+  --tree-border: var(--vscode-panel-border, #303c4b);
+  --tree-ink: var(--vscode-editor-foreground, #e6edf3);
+  --tree-dim: var(--vscode-descriptionForeground, #a6b4c4);
+  --tree-green: #5dd9a5;
+  --tree-amber: #f0be69;
+  --tree-blue: #82b6f9;
+  --tree-purple: #b5a3ed;
+  --tree-pink: #eea0c2;
+  --tree-focus: var(--vscode-focusBorder, #82b6f9);
+  font-family: var(--vscode-font-family, 'Segoe UI', 'Microsoft YaHei', sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--tree-ink);
+  background: var(--tree-bg);
+  height: 100dvh;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  line-height: 1.5;
+}
+body.vscode-light .version-tree {
+  --tree-green: #15794d; --tree-amber: #8b5908; --tree-blue: #285caf; --tree-purple: #7950b1; --tree-pink: #a33769;
+}
+.version-tree *, .version-tree *::before, .version-tree *::after { box-sizing: border-box; }
+.version-tree ::selection { background: var(--tree-blue); color: var(--tree-bg); }
+.version-tree * { scrollbar-width: thin; scrollbar-color: var(--tree-border) transparent; }
+.version-tree :focus-visible { outline: 2px solid var(--tree-focus); outline-offset: 3px; }
+.version-tree button, .version-tree input, .version-tree select { font: inherit; color: inherit; }
+.version-tree button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--tree-border); border-radius: 6px; padding: 7px 11px; background: var(--tree-raised); cursor: pointer; line-height: 1.4; }
+.version-tree button:hover:not(:disabled) { border-color: var(--tree-dim); background: color-mix(in srgb, var(--tree-ink) 8%, var(--tree-raised)); }
+.version-tree button:disabled { opacity: .48; cursor: not-allowed; }
+.version-tree button.quiet { background: transparent; border-color: transparent; }
+.version-tree .icon-button { padding: 7px; flex-shrink: 0; }
+.version-tree button.primary { background: var(--tree-green); color: var(--tree-bg); border-color: transparent; font-weight: 650; }
+.version-tree button.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--tree-green) 85%, var(--tree-ink)); }
+.version-tree button.active-button { border-color: var(--tree-amber); color: var(--tree-amber); }
+.version-tree h1, .version-tree h2, .version-tree h3, .version-tree p { margin: 0; }
+.version-tree h2 { font-size: 14px; font-weight: 600; }
+.version-tree code { font-family: var(--vscode-editor-font-family, Consolas, monospace); font-size: 11px; font-variant-numeric: tabular-nums; }
+.version-tree svg { flex-shrink: 0; }
+.tree-header { display: flex; align-items: center; gap: 12px; padding: 15px 22px; border-bottom: 1px solid var(--tree-border); }
+.tree-brand { display: flex; align-items: center; gap: 10px; }
+.tree-brand > svg { color: var(--tree-green); }
+.tree-brand h1 { font-size: 20px; font-weight: 650; letter-spacing: -.025em; }
+.tree-brand > span { color: var(--tree-dim); margin-left: 5px; }
+.tree-header .repo-picker { margin-left: auto; max-width: 40%; overflow: hidden; white-space: nowrap; }
+.journey-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 22px; padding: 12px 22px; font-size: 12px; background: var(--tree-panel); border-bottom: 1px solid var(--tree-border); }
+.journey-bar > div { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.journey-bar strong { max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.journey-bar > span { color: var(--tree-dim); }
+.live-dot, .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tree-green); display: inline-block; flex-shrink: 0; }
+.workspace-state { margin-left: 5px; color: var(--tree-green); }
+.workspace-state.dirty, .dirty-hint { color: var(--tree-amber); }
+.tree-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 13px 20px; border-bottom: 1px solid var(--tree-border); }
+.tree-search { display: flex; align-items: center; gap: 8px; min-width: 160px; flex: 1; color: var(--tree-dim); }
+.tree-search input { width: 100%; border: 0; background: transparent; padding: 5px 3px; outline-offset: 0; caret-color: var(--tree-green); }
+.tree-search input::placeholder { color: var(--tree-dim); opacity: 1; }
+.branch-filter { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tree-dim); }
+.branch-filter select { border: 1px solid var(--tree-border); background: var(--tree-panel); padding: 5px 8px; border-radius: 5px; max-width: 180px; }
+.tree-workbench { display: grid; grid-template-columns: minmax(0, 1fr) 310px; flex: 1; min-height: 0; }
+.tree-map { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+.map-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 18px 22px 13px; }
+.map-heading > div > span { font-size: 11px; color: var(--tree-dim); display: block; margin-top: 4px; }
+.map-heading button { font-size: 12px; }
+.map-viewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; touch-action: pan-x pan-y; background-image: radial-gradient(circle, color-mix(in srgb, var(--tree-dim) 18%, transparent) .75px, transparent .75px); background-size: 24px 24px; }
+.map-viewport:active { cursor: grabbing; }
+.map-space { position: relative; min-width: 100%; }
+.map-world { transform-origin: top left; position: relative; }
+.map-lines { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.map-lines path { fill: none; stroke-width: 2; opacity: .5; transition: opacity 180ms ease; }
+.map-lines path.path-active { opacity: 1; stroke-width: 2.5; }
+.map-lines path.path-missing { stroke-dasharray: 5 5; opacity: .45; }
+.version-tree button.save-node { position: absolute; width: 188px; height: 76px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 4px; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--tree-border); background: var(--tree-panel); text-align: left; transition: left 220ms ease-out, top 220ms ease-out, border-color 150ms ease, opacity 150ms ease, background-color 150ms ease; }
+.version-tree button.save-node:hover { border-color: var(--lane); background: var(--tree-raised); }
+.version-tree button.save-node.selected { outline: 2px solid var(--tree-amber); outline-offset: 3px; border-color: var(--tree-amber); background: var(--tree-raised); animation: node-arrival 250ms ease-out; }
+.version-tree button.save-node.at-head { border-color: var(--tree-green); }
+.version-tree button.save-node.muted { opacity: .28; }
+.version-tree button.save-node.muted:hover, .version-tree button.save-node.muted:focus-visible { opacity: 1; }
+.version-tree button.save-node.compared { border-color: var(--tree-amber); }
+.node-top { display: flex; align-items: center; gap: 7px; color: var(--tree-dim); height: 15px; }
+.node-marker { width: 7px; height: 7px; border: 1.5px solid var(--lane); border-radius: 50%; }
+.at-head .node-marker { background: var(--tree-green); border-color: var(--tree-green); }
+.head-label { color: var(--tree-green); font-size: 10px; margin-left: auto; white-space: nowrap; }
+.compare-label { color: var(--tree-bg); background: var(--tree-amber); border-radius: 3px; padding: 0 4px; font-size: 10px; margin-left: auto; }
+.node-message { font-size: 12px; font-weight: 550; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node-foot { font-size: 10px; color: var(--lane); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-boundary { position: absolute; left: 48px; color: var(--tree-dim); font-size: 11px; }
+.map-no-results { position: sticky; bottom: 20px; margin: 12px 22px; padding: 12px; background: var(--tree-panel); color: var(--tree-dim); }
+.map-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 18px; border-top: 1px solid var(--tree-border); font-size: 10px; color: var(--tree-dim); }
+.map-footer > span { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.legend-ring { margin-left: 6px; width: 8px; height: 8px; border: 1px solid var(--tree-amber); border-radius: 50%; }
+.zoom-controls { display: flex; align-items: center; flex-shrink: 0; }
+.zoom-controls button { border: 0; background: transparent; padding: 4px; }
+.zoom-controls output { width: 42px; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.node-inspector { background: var(--tree-panel); border-left: 1px solid var(--tree-border); overflow-y: auto; min-width: 0; }
+.inspector-heading { padding: 20px 20px 12px; display: flex; align-items: center; justify-content: space-between; }
+.read-only-note { color: var(--tree-dim); font-size: 10px; }
+.commit-summary { padding: 6px 20px 19px; overflow-wrap: anywhere; }
+.commit-id { display: flex; align-items: center; gap: 7px; color: var(--tree-amber); margin: 2px 0 10px; font-size: 11px; }
+.commit-summary h3 { font-size: 17px; line-height: 1.5; font-weight: 600; margin-bottom: 12px; }
+.commit-summary p { color: var(--tree-dim); font-size: 12px; }
+.commit-date { display: block; font-size: 11px; margin-top: 5px; }
+.commit-body { white-space: pre-wrap; font: inherit; font-size: 12px; color: var(--tree-dim); max-height: 160px; overflow: auto; }
+.commit-summary .merge-note { font-size: 11px; margin-top: 12px; }
+.node-actions { padding: 17px 20px; border-top: 1px solid var(--tree-border); border-bottom: 1px solid var(--tree-border); display: flex; flex-direction: column; gap: 10px; }
+.node-actions p { font-size: 11px; color: var(--tree-dim); }
+.node-actions p.dirty-hint { color: var(--tree-amber); }
+.secondary-actions { display: flex; gap: 8px; margin-top: 5px; }
+.secondary-actions button { flex: 1; padding: 7px 6px; font-size: 11px; }
+.version-tree .switch-ref { justify-content: space-between; font-size: 11px; overflow-wrap: anywhere; }
+.changes-heading { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 10px; }
+.changes-heading h3 { font-size: 12px; font-weight: 600; }
+.changes-heading > span { color: var(--tree-dim); font-variant-numeric: tabular-nums; }
+.file-changes { padding: 0 9px; }
+.version-tree .file-change { width: 100%; border: 0; background: transparent; padding: 9px 11px; text-align: left; border-radius: 4px; }
+.file-status { font-size: 10px; font-weight: 700; width: 15px; color: var(--tree-amber); flex-shrink: 0; }
+.status-A { color: var(--tree-green); }.status-D { color: var(--tree-pink); }
+.file-name { flex: 1; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.file-name small { display: block; font-size: 10px; margin-top: 2px; color: var(--tree-dim); }
+.file-change > svg { color: var(--tree-dim); }
+.diff-tip { font-size: 10px; color: var(--tree-dim); padding: 16px 20px; }
+.quiet-text { color: var(--tree-dim); padding: 8px 11px; font-size: 12px; }
+.no-changes { display: flex; gap: 8px; align-items: center; padding: 12px; color: var(--tree-dim); font-size: 12px; }
+.tree-status { font-size: 10px; padding: 7px 18px; border-top: 1px solid var(--tree-border); color: var(--tree-dim); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tree-status > span { display: inline-flex; align-items: center; gap: 6px; }
+.tree-message { display: flex; align-items: center; justify-content: space-between; background: var(--tree-raised); border-bottom: 1px solid var(--tree-border); color: var(--tree-green); padding: 9px 20px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 160px; overflow: auto; flex-shrink: 0; }
+.tree-message.error-message { color: var(--vscode-errorForeground, #ff9d9d); }
+.compare-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 9px 22px; border-bottom: 1px solid var(--tree-border); background: var(--tree-panel); color: var(--tree-amber); font-size: 11px; }
+.compare-token { display: inline-flex; align-items: center; gap: 7px; }
+.compare-strip > .icon-button:last-child { margin-left: auto; }
+.initial-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; flex: 1; gap: 18px; padding: 35px; }
+.initial-state > svg { color: var(--tree-green); }
+.initial-state p { color: var(--tree-dim); max-width: 48ch; }
+@keyframes node-arrival { from { outline-offset: 7px; } to { outline-offset: 3px; } }
+@media (max-width: 950px) { .tree-workbench { grid-template-columns: minmax(0, 1fr) 270px; } .map-heading-note { display: none; } .tree-header, .journey-bar { padding-left: 16px; padding-right: 16px; } .branch-filter select { max-width: 130px; } }
+@media (max-width: 640px) { .tree-workbench { display: flex; flex-direction: column; overflow: auto; } .tree-map { min-height: 420px; flex: 0 0 58vh; } .node-inspector { border-left: 0; border-top: 1px solid var(--tree-border); flex-shrink: 0; overflow: visible; } .tree-tools { gap: 8px; padding: 9px 12px; } .tree-search { flex-basis: 100%; } .tree-header { padding: 12px; gap: 5px; } .tree-brand > span { display: none; } .journey-bar { padding: 10px 12px; font-size: 11px; } .workspace-state { margin-left: 0; } .tree-status { padding: 7px 10px; font-size: 9px; } .map-heading { padding: 14px; } }
+@media (prefers-reduced-motion: reduce) { .version-tree *, .version-tree *::before, .version-tree *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+.history-controls { flex-shrink: 0; max-height: 34%; overflow: auto; border-bottom: 1px solid var(--tree-border); background: var(--tree-panel); }
+.history-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; padding: 8px 20px; font-size: 12px; }
+.history-progress > span { margin-right: auto; color: var(--tree-dim); }
+.history-progress strong { color: var(--tree-ink); font-variant-numeric: tabular-nums; }
+.version-tree .history-progress button { font-size: 11px; padding: 5px 9px; }
+.history-warning { padding: 8px 20px; font-size: 12px; color: var(--tree-amber); }
+.history-results { padding: 8px 20px 12px; border-top: 1px solid var(--tree-border); }
+.history-results-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; margin-bottom: 8px; }
+.history-results-heading > span { color: var(--tree-dim); }
+.version-tree .history-hit { display: flex; width: 100%; text-align: left; justify-content: flex-start; border-bottom: 1px solid var(--tree-border); border-radius: 0; }
+.history-hit > span:nth-child(2) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.history-hit small { display: block; color: var(--tree-dim); font-size: 11px; }
+.history-hit > span:last-child { color: var(--tree-green); font-size: 11px; flex-shrink: 0; }

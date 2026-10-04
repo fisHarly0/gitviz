@@ -38,6 +38,21 @@ button {
 button:hover {
   border-color: var(--accent);
 }
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.runtime-hint {
+  margin-bottom: 18px;
+}
+.repo-loader .error {
+  overflow-wrap: anywhere;
+}
 input {
   background: var(--bg);
   color: var(--text);

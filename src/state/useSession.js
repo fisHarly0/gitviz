@@ -38,14 +38,15 @@ export function useSession() {
   const [changedFilesInIf, setChangedFilesInIf] = useState(0)
   const [headOid, setHeadOid] = useState(null) // 当前 currentBranch HEAD oid (UI 显示用)
 
-  const setupRepo = useCallback((branchNames, headOidValue) => {
+  const setupRepo = useCallback((branchNames, headOidValue, initialBranch) => {
     const main = pickMainBranch(branchNames)
+    const current = branchNames.includes(initialBranch) ? initialBranch : main
     setMainBranch(main)
-    setCurrentBranch(main)
+    setCurrentBranch(current)
     setHeadOid(headOidValue || null)
     setMode('browse')
     setViewingOid(null)
-    setCurrentIfBranch(null)
+    setCurrentIfBranch(isIfBranch(current) ? current : null)
     setEditingFile(null)
     setIfLineCounter(0)
     setChangedFilesInIf(0)
@@ -62,9 +63,9 @@ export function useSession() {
   }, [])
 
   // 切回 main / 切回某 commit 当前线 HEAD
-  const leaveToBrowse = useCallback(() => {
+  const leaveToBrowse = useCallback((oid = null) => {
     setMode('browse')
-    setViewingOid(null)
+    setViewingOid(oid)
     setEditingFile(null)
     setChangedFilesInIf(0)
   }, [])

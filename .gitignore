@@ -29,3 +29,8 @@ dist-ssr
 .env.*
 
 gitviz-档案/
+
+# Generated extension bundles and local VSIX builds
+extensions/vscode/media/
+artifacts/
+.impeccable/review/

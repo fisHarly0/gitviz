@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import RepoLoader from './components/RepoLoader.jsx'
 import CommitGraph from './components/CommitGraph.jsx'
@@ -11,6 +12,7 @@ import { openRepo, createTauriAdapter } from './adapters/tauriAdapter.js'
 import './App.css'
 
 export default function App() {
+  const desktop = isTauri()
   const [adapter, setAdapter] = useState(null)
   const [branches, setBranches] = useState([])
   const [refreshKey, setRefreshKey] = useState(0) // commit 后 ++ 触发 CommitGraph 重新拉
@@ -20,7 +22,9 @@ export default function App() {
 
   // 整窗口拖放：拖任意文件夹进窗口 → 自动 openRepo 切换 adapter
   useEffect(() => {
+    if (!desktop) return
     let unlisten
+    let disposed = false
     ;(async () => {
       try {
         unlisten = await getCurrentWebview().onDragDropEvent(async (evt) => {
@@ -49,22 +53,26 @@ export default function App() {
             }
           }
         })
+        if (disposed) unlisten()
       } catch {
         // 非 Tauri 环境（pure vite preview）忽略
       }
     })()
     return () => {
+      disposed = true
       if (typeof unlisten === 'function') unlisten()
     }
-  }, [])
+  }, [desktop])
 
   // 拉 branches 列表 + 选 main · adapter 切换 OR 用户 commit 后都要重拉
   useEffect(() => {
     if (!adapter) return
     let cancelled = false
-    adapter
-      .listBranches()
-      .then((refs) => {
+    Promise.all([
+      adapter.listBranches(),
+      typeof adapter.currentBranch === 'function' ? adapter.currentBranch() : null,
+    ])
+      .then(([refs, currentBranch]) => {
         if (cancelled) return
         setBranches(refs)
         const names = refs.map((r) => r.name)
@@ -73,14 +81,15 @@ export default function App() {
           : names.includes('master')
             ? 'master'
             : names[0] || 'main'
-        const mainRef = refs.find((r) => r.name === main)
+        const initialBranch = names.includes(currentBranch) ? currentBranch : main
+        const initialRef = refs.find((r) => r.name === initialBranch)
         // 首次加载（refreshKey === 0）才 setupRepo · 后续 commit 触发的 refresh 不应 reset session
         if (refreshKey === 0) {
-          session.setupRepo(names, mainRef ? mainRef.oid : null)
+          session.setupRepo(names, initialRef ? initialRef.oid : null, initialBranch)
         }
       })
-      .catch(() => {
-        if (refreshKey === 0) session.setupRepo(['main'], null)
+      .catch((err) => {
+        if (!cancelled) setDropError(err.message || String(err))
       })
     return () => {
       cancelled = true
@@ -98,11 +107,15 @@ export default function App() {
       <div className={dragOver ? 'app start drag-over' : 'app start'}>
         <header className="app-header">
           <h1>gitviz</h1>
-          <p>Browse a git repo visually. Local folders or any GitHub repo.</p>
-          <p className="tagline">Past commits are save slots. Edit anything to fork an if-line.</p>
-          <p className="drop-hint">Tip: drop a folder anywhere on this window to open it instantly.</p>
+          <p>Browse Git history as a timeline of save points.</p>
+          <p className="tagline">{desktop ? 'Preview past commits, then create an if-line to experiment.' : 'Explore branches and changes in a GitHub repository.'}</p>
+          {desktop && <p className="drop-hint">Tip: drop a repository folder here to open it.</p>}
         </header>
-        <RepoLoader onLoaded={(a) => setAdapter(a)} />
+        <RepoLoader desktop={desktop} onLoaded={(a) => {
+          setRefreshKey(0)
+          setDropError('')
+          setAdapter(a)
+        }} />
         {dropError && <div className="error drop-error">{dropError}</div>}
         {dragOver && <div className="drop-overlay">Drop folder to open</div>}
       </div>
@@ -116,7 +129,7 @@ export default function App() {
     }
     // 点了当前 HEAD（最新的 commit）= 回到 browse
     if (oid === session.headOid) {
-      session.leaveToBrowse()
+      session.leaveToBrowse(oid)
       return
     }
     session.enterPreview(oid)
@@ -146,6 +159,7 @@ export default function App() {
         <PreviewBanner
           viewingOid={session.viewingOid}
           currentBranch={session.currentBranch}
+          readOnly={adapter.kind() !== 'local'}
           onReturn={() => session.leaveToBrowse()}
         />
       )}
@@ -157,7 +171,7 @@ export default function App() {
             currentBranch={session.currentBranch}
             mainBranch={session.mainBranch}
             adapter={adapter}
-            onSwitched={(name, oid) => session.switchToBranch(name, oid)}
+            onSwitched={(name, oid) => { session.switchToBranch(name, oid); handleCommitted() }}
           />
           <CommitGraph
             adapter={adapter}
@@ -177,6 +191,7 @@ export default function App() {
       </main>
 
       <ModeStatusBar
+        readOnly={adapter.kind() !== 'local'}
         mode={session.mode}
         currentBranch={session.currentBranch}
         viewingOid={session.viewingOid}

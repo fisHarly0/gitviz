@@ -159,12 +159,12 @@ pub async fn get_commit_detail(
 
     // tree diff old → new
     let mut files: Vec<FileChange> = Vec::new();
-    let mut platform = new_tree
+    let mut platform = old_tree
         .changes()
         .map_err(|e| format!("changes: {e}"))?;
 
     platform
-        .for_each_to_obtain_tree(&old_tree, |change| {
+        .for_each_to_obtain_tree(&new_tree, |change| {
             use gix::object::tree::diff::Change;
             match change {
                 Change::Addition {

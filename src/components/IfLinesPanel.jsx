@@ -3,6 +3,7 @@
 // 当 currentBranch 是 if-* 时末尾显示 Export 按钮导出 .zip
 
 import { isIfBranch } from '../state/useSession.js'
+import { useState } from 'react'
 import ExportButton from './ExportButton.jsx'
 
 function short(oid) {
@@ -16,20 +17,26 @@ export default function IfLinesPanel({
   adapter,
   onSwitched, // (branchName, headOid) => void
 }) {
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
   if (!branches || branches.length === 0) return null
 
   const mainRef = branches.find((b) => b.name === mainBranch)
   const ifBranches = branches.filter((b) => isIfBranch(b.name))
 
   const switchTo = async (b) => {
-    if (b.name === currentBranch) return
+    if (busy || b.name === currentBranch) return
+    setBusy(true)
+    setError('')
     try {
       if (typeof adapter.checkout === 'function') {
         await adapter.checkout(b.name)
       }
       onSwitched(b.name, b.oid)
     } catch (err) {
-      console.error('switch failed:', err)
+      setError(err.message || String(err))
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -41,6 +48,7 @@ export default function IfLinesPanel({
           <button
             className={`branch-chip main ${currentBranch === mainBranch ? 'active' : ''}`}
             onClick={() => switchTo(mainRef)}
+            disabled={busy}
             title={`switch to ${mainBranch} (HEAD = ${short(mainRef.oid)})`}
           >
             <span className="dot" />
@@ -53,6 +61,7 @@ export default function IfLinesPanel({
             key={b.name}
             className={`branch-chip if i${i % 5} ${currentBranch === b.name ? 'active' : ''}`}
             onClick={() => switchTo(b)}
+            disabled={busy}
             title={`switch to ${b.name} (HEAD = ${short(b.oid)})`}
           >
             <span className="dot" />
@@ -61,14 +70,15 @@ export default function IfLinesPanel({
           </button>
         ))}
         {ifBranches.length === 0 && (
-          <span className="empty-hint">// no if-lines yet · preview an old commit and edit a file to fork one</span>
+          <span className="empty-hint">{adapter.kind() === 'local' ? 'Preview an old commit and edit a file to create an if-line.' : 'Read-only GitHub repository.'}</span>
         )}
-        {isIfBranch(currentBranch) && (
+        {isIfBranch(currentBranch) && typeof adapter.exportBranchAsBundle === 'function' && (
           <span className="export-slot">
             <ExportButton adapter={adapter} branchName={currentBranch} />
           </span>
         )}
       </div>
+      {error && <div className="error" role="alert">Could not switch branch: {error}</div>}
     </div>
   )
 }

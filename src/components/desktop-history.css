@@ -1,0 +1,11 @@
+.graph-pane:has(.desktop-history) { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+.desktop-history { flex: 1; min-height: 0; height: 100%; --tree-bg: var(--bg, #0d1117); --tree-panel: var(--surface, #151b23); --tree-ink: var(--text, #e6edf3); }
+.desktop-history .tree-map { flex: 1; min-height: 0; }
+.desktop-history .tree-tools { padding: 10px; }
+.desktop-history .tree-search { flex-basis: 100%; }
+.desktop-history-tools { display: flex; gap: 8px; }
+.desktop-history-tools button[aria-pressed="true"] { border-color: var(--tree-green); color: var(--tree-green); }
+.desktop-history-position { padding: 8px 12px; font-size: 11px; color: var(--tree-dim); border-bottom: 1px solid var(--tree-border); }
+.desktop-history .history-progress { padding: 8px 12px; }
+.desktop-history .history-progress > span { flex-basis: 100%; }
+.desktop-history .map-heading { padding: 12px; }

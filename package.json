@@ -3,9 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build --no-bundle",
+    "desktop:bundle": "tauri build",
     "build": "vite build",
+    "extension:build": "vite build --config vite.extension.config.js",
+    "extension:package": "npm run extension:build && node scripts/package-extension.mjs",
+    "extension:test": "node --test tests/version-tree.test.js tests/git-service.test.cjs",
+    "dsh:build": "vite build --config vite.dsh.config.js",
+    "dsh:package": "npm run dsh:build && node scripts/package-dsh.mjs",
+    "dsh:test": "node --test tests/dsh-host.test.mjs",
+    "history:test": "node --test tests/large-history.test.mjs",
+    "test": "node --test tests/*.test.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -31,6 +45,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "postcss": "8.5.14",
     "vite": "^8.0.12"
   }
 }

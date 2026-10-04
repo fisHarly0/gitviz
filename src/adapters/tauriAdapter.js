@@ -9,6 +9,18 @@ export function createTauriAdapter() {
   /** @type {import('./RepoAdapter.js').RepoAdapter} */
   const adapter = {
     kind: () => ADAPTER_KIND.LOCAL,
+    historyId: crypto.randomUUID(),
+
+    async historyRequest(method, params = {}) {
+      try {
+        if (method === 'snapshot') return await invoke('history_snapshot', { limit: 300 })
+        if (method === 'historyPage') return await invoke('history_page', { params })
+        if (method === 'searchHistory') return await invoke('history_search', { params })
+        throw new Error('不支持的历史请求。')
+      } catch (reason) {
+        throw reason instanceof Error ? reason : new Error(String(reason))
+      }
+    },
 
     async listBranches() {
       return invoke('list_branches')

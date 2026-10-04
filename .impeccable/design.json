@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T07:41:07.414Z",
+  "title": "Design System: Gitviz",
+  "extensions": {
+    "colorMeta": {
+      "tree-green": {
+        "role": "primary",
+        "displayName": "主干绿"
+      },
+      "tree-amber": {
+        "role": "primary",
+        "displayName": "试验琥珀"
+      },
+      "tree-blue": {
+        "role": "secondary",
+        "displayName": "分支蓝"
+      },
+      "tree-purple": {
+        "role": "secondary",
+        "displayName": "分支紫"
+      },
+      "tree-pink": {
+        "role": "secondary",
+        "displayName": "分支粉"
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "edge-opacity",
+        "value": "opacity 180ms ease",
+        "purpose": "祖先路径突出。"
+      },
+      {
+        "name": "node-position",
+        "value": "left 220ms ease-out, top 220ms ease-out",
+        "purpose": "地图节点布局过渡。"
+      },
+      {
+        "name": "node-state",
+        "value": "border-color 150ms ease, opacity 150ms ease, background-color 150ms ease",
+        "purpose": "节点状态反馈。"
+      },
+      {
+        "name": "node-arrival",
+        "value": "250ms ease-out",
+        "purpose": "选中外框偏移由 7px 收至 3px。"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none !important; transition: none !important; scroll-behavior: auto !important;",
+        "purpose": "减少动态效果时关闭动画、过渡和平滑滚动。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-inspector",
+        "value": "950px"
+      },
+      {
+        "name": "stacked-workbench",
+        "value": "640px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "普通操作",
+      "kind": "button",
+      "refersTo": "button-default",
+      "description": "细边框、宿主控件表面与禁用反馈。",
+      "html": "<button class=\"ds-button\">建分支</button>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-button{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--tree-border,var(--vscode-panel-border,#303c4b));border-radius:6px;padding:7px 11px;background:var(--tree-raised,var(--vscode-input-background,#202935));color:var(--tree-ink,var(--vscode-editor-foreground,#e6edf3));cursor:pointer;line-height:1.4}.ds-button:hover:not(:disabled){border-color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4));background:color-mix(in srgb,var(--tree-ink,var(--vscode-editor-foreground,#e6edf3)) 8%,var(--tree-raised,var(--vscode-input-background,#202935)))}.ds-button:disabled{opacity:.48;cursor:not-allowed}.ds-button:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:3px}"
+    },
+    {
+      "name": "主操作",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "独立试验工作区入口。",
+      "html": "<button class=\"ds-button ds-primary\">从这里试一版</button>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-button{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--tree-border,var(--vscode-panel-border,#303c4b));border-radius:6px;padding:7px 11px;background:var(--tree-raised,var(--vscode-input-background,#202935));color:var(--tree-ink,var(--vscode-editor-foreground,#e6edf3));cursor:pointer;line-height:1.4}.ds-button:hover:not(:disabled){border-color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4));background:color-mix(in srgb,var(--tree-ink,var(--vscode-editor-foreground,#e6edf3)) 8%,var(--tree-raised,var(--vscode-input-background,#202935)))}.ds-button:disabled{opacity:.48;cursor:not-allowed}.ds-button:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:3px}.ds-primary{background:var(--tree-green,var(--ds-green,#5dd9a5));color:var(--tree-bg,var(--vscode-editor-background,#0d1117));border-color:transparent;font-weight:650}.ds-primary:hover:not(:disabled){background:color-mix(in srgb,var(--tree-green,var(--ds-green,#5dd9a5)) 85%,var(--tree-ink,var(--vscode-editor-foreground,#e6edf3)))}"
+    },
+    {
+      "name": "安静操作",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "定位、刷新等轻量工具操作。",
+      "html": "<button class=\"ds-button ds-quiet\">当前位置</button>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-button{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--tree-border,var(--vscode-panel-border,#303c4b));border-radius:6px;padding:7px 11px;background:var(--tree-raised,var(--vscode-input-background,#202935));color:var(--tree-ink,var(--vscode-editor-foreground,#e6edf3));cursor:pointer;line-height:1.4}.ds-button:hover:not(:disabled){border-color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4));background:color-mix(in srgb,var(--tree-ink,var(--vscode-editor-foreground,#e6edf3)) 8%,var(--tree-raised,var(--vscode-input-background,#202935)))}.ds-button:disabled{opacity:.48;cursor:not-allowed}.ds-button:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:3px}.ds-quiet{background:transparent;border-color:transparent}"
+    },
+    {
+      "name": "比较模式",
+      "kind": "button",
+      "refersTo": "button-active",
+      "description": "模式激活时保留琥珀色边框和文字。",
+      "html": "<button class=\"ds-button ds-active\" aria-pressed=\"true\">比较两个存档</button>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-button{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--tree-border,var(--vscode-panel-border,#303c4b));border-radius:6px;padding:7px 11px;background:var(--tree-raised,var(--vscode-input-background,#202935));color:var(--tree-ink,var(--vscode-editor-foreground,#e6edf3));cursor:pointer;line-height:1.4}.ds-button:hover:not(:disabled){border-color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4));background:color-mix(in srgb,var(--tree-ink,var(--vscode-editor-foreground,#e6edf3)) 8%,var(--tree-raised,var(--vscode-input-background,#202935)))}.ds-button:disabled{opacity:.48;cursor:not-allowed}.ds-button:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:3px}.ds-active{border-color:var(--tree-amber,var(--ds-amber,#f0be69));color:var(--tree-amber,var(--ds-amber,#f0be69))}"
+    },
+    {
+      "name": "搜索存档",
+      "kind": "input",
+      "refersTo": "search-input",
+      "description": "透明输入、绿色光标和可见键盘焦点。",
+      "html": "<input class=\"ds-search\" aria-label=\"搜索存档\" placeholder=\"搜索提交、作者、编号…\">",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-search{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;width:100%;border:0;background:transparent;padding:5px 3px;color:var(--tree-ink,var(--vscode-editor-foreground,#e6edf3));caret-color:var(--tree-green,var(--ds-green,#5dd9a5))}.ds-search::placeholder{color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4));opacity:1}.ds-search:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:0}"
+    },
+    {
+      "name": "历史路径导航",
+      "kind": "nav",
+      "refersTo": "branch-select",
+      "description": "聚焦历史路径的原生选择器，不切换工作文件。",
+      "html": "<label class=\"ds-path\">路径 <select aria-label=\"聚焦分支路径\"><option>所有分支</option><option>main</option></select></label>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-path{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4))}.ds-path select{font:inherit;color:inherit;border:1px solid var(--tree-border,var(--vscode-panel-border,#303c4b));background:var(--tree-panel,var(--vscode-sideBar-background,#151b23));padding:5px 8px;border-radius:5px;max-width:180px}.ds-path select:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:3px}"
+    },
+    {
+      "name": "存档卡片",
+      "kind": "card",
+      "refersTo": "save-node",
+      "description": "实际 HEAD 保留绿色标记；此示例同时显示琥珀色预览外框。",
+      "html": "<button class=\"ds-node ds-selected\" aria-pressed=\"true\"><span class=\"ds-top\"><i class=\"ds-marker\"></i><code>e2cd0eb</code><span class=\"ds-head\">你在这里</span></span><span class=\"ds-message\">恢复存档</span><span class=\"ds-foot\">main</span></button>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-node{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;box-sizing:border-box;width:188px;height:76px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;padding:9px 12px;border-radius:8px;border:1px solid var(--tree-green,var(--ds-green,#5dd9a5));background:var(--tree-panel,var(--vscode-sideBar-background,#151b23));color:var(--tree-ink,var(--vscode-editor-foreground,#e6edf3));text-align:left;cursor:pointer;line-height:1.4;transition:border-color 150ms ease,opacity 150ms ease,background-color 150ms ease}.ds-node:hover{border-color:var(--tree-green,var(--ds-green,#5dd9a5));background:var(--tree-raised,var(--vscode-input-background,#202935))}.ds-node:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:3px}.ds-selected{outline:2px solid var(--tree-amber,var(--ds-amber,#f0be69));outline-offset:3px;background:var(--tree-raised,var(--vscode-input-background,#202935))}.ds-top{display:flex;align-items:center;gap:7px;color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4));height:15px}.ds-top code{font-family:var(--vscode-editor-font-family,Consolas,monospace);font-size:11px;font-variant-numeric:tabular-nums}.ds-marker{width:7px;height:7px;border:1.5px solid var(--tree-green,var(--ds-green,#5dd9a5));border-radius:50%;background:var(--tree-green,var(--ds-green,#5dd9a5))}.ds-head{color:var(--tree-green,var(--ds-green,#5dd9a5));font-size:10px;margin-left:auto;white-space:nowrap}.ds-message{font-size:12px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-foot{font-size:10px;color:var(--tree-green,var(--ds-green,#5dd9a5));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(prefers-reduced-motion:reduce){.ds-node{transition:none}}"
+    },
+    {
+      "name": "比较端点标签",
+      "kind": "chip",
+      "refersTo": "compare-label",
+      "description": "节点上的只读 A/B 标识。",
+      "html": "<span class=\"ds-label\">A</span>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-label{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;color:var(--tree-bg,var(--vscode-editor-background,#0d1117));background:var(--tree-amber,var(--ds-amber,#f0be69));border-radius:3px;padding:0 4px;font-size:10px}"
+    },
+    {
+      "name": "文件变化",
+      "kind": "button",
+      "refersTo": "file-row",
+      "description": "变化字母与中文类型说明；点击在宿主查看差异。",
+      "html": "<button class=\"ds-button ds-file\"><span class=\"ds-status\">A</span><span class=\"ds-name\">palette.css<small>新增</small></span></button>",
+      "css": ":host-context(body.vscode-light){--ds-green:#15794d;--ds-amber:#8b5908;}.ds-button{font-family:var(--vscode-font-family,'Segoe UI','Microsoft YaHei',sans-serif);font-size:var(--vscode-font-size,13px);line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--tree-border,var(--vscode-panel-border,#303c4b));border-radius:6px;padding:7px 11px;background:var(--tree-raised,var(--vscode-input-background,#202935));color:var(--tree-ink,var(--vscode-editor-foreground,#e6edf3));cursor:pointer;line-height:1.4}.ds-button:hover:not(:disabled){border-color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4));background:color-mix(in srgb,var(--tree-ink,var(--vscode-editor-foreground,#e6edf3)) 8%,var(--tree-raised,var(--vscode-input-background,#202935)))}.ds-button:disabled{opacity:.48;cursor:not-allowed}.ds-button:focus-visible{outline:2px solid var(--tree-focus,var(--vscode-focusBorder,#82b6f9));outline-offset:3px}.ds-file{width:100%;border:0;background:transparent;padding:9px 11px;text-align:left;border-radius:4px}.ds-status{font-size:10px;font-weight:700;width:15px;color:var(--tree-green,var(--ds-green,#5dd9a5));flex-shrink:0}.ds-name{flex:1;min-width:0;font-size:12px;overflow-wrap:anywhere}.ds-name small{display:block;font-size:10px;margin-top:2px;color:var(--tree-dim,var(--vscode-descriptionForeground,#a6b4c4))}"
+    }
+  ],
+  "narrative": {
+    "northStar": "游戏存档式版本地图",
+    "overview": "Gitviz 将真实提交呈现为可浏览的存档点，用主干、分叉与合并连接解释历史。视觉继承现有深色、绿色主线与琥珀色试验线语言；版本地图进入 VS Code 后，背景、文字、控件表面与焦点颜色跟随宿主，深色与浅色使用各自的语义强调色。\n\n本文件记录已实现的 `src/version-tree/`，依据 `version-tree.css`、`TreeMap.jsx`、`VersionTree.jsx` 与 `layout.js`，并核对 `.impeccable/review/desktop.png` 和 `light.png`。既有 Tauri 界面及 `src/App.css` 未迁移到这些 token；不要将本文件解释为已完成全应用主题统一。前置 token 是现有值的文档化映射，不是新增运行时主题配置。",
+    "keyCharacteristics": [
+      "紧凑的工具界面，地图与详情检查器并置。",
+      "绿色标明实际 HEAD，琥珀色描边标明正在预览。",
+      "使用真实父边、文字状态与宿主原生差异查看。",
+      "深浅色沿用相同布局，强调色随模式调整。"
+    ],
+    "rules": [
+      {
+        "name": "The Position and Preview Rule",
+        "body": "实际位置使用绿色实心标记与“你在这里”；预览使用琥珀色外框，并在状态栏说明文件未切换。颜色始终配合文字。",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do 延用宿主中性色与深浅色强调色映射。",
+      "Do 保留实际 HEAD、预览及比较之间的文字和视觉区分。",
+      "Do 保留所有真实父边，并清楚标注未载入的历史。",
+      "Do 在小窗口中将检查器放到地图下方，保留完整动作与说明。",
+      "Do 保留键盘焦点和减少动态效果支持。"
+    ],
+    "donts": [
+      "Don't 将 lane 颜色解释为永久绑定的分支名称。",
+      "Don't 用点选预览暗示工作文件已经切换。",
+      "Don't 将版本树主题 token 当作旧 Tauri 界面已完成迁移的证据。",
+      "Don't 为记录现状而添加未实现的色阶、阴影或装饰组件。"
+    ]
+  }
+}

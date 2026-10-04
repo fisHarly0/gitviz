@@ -4,18 +4,27 @@ import { ADAPTER_KIND } from './RepoAdapter.js'
 const PAT_KEY = 'gitviz:gh-pat'
 
 export function savePAT(token) {
-  if (token) sessionStorage.setItem(PAT_KEY, token)
-  else sessionStorage.removeItem(PAT_KEY)
+  try {
+    if (token) sessionStorage.setItem(PAT_KEY, token)
+    else sessionStorage.removeItem(PAT_KEY)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function loadPAT() {
-  return sessionStorage.getItem(PAT_KEY) || ''
+  try {
+    return sessionStorage.getItem(PAT_KEY) || ''
+  } catch {
+    return ''
+  }
 }
 
 export function parseRepoSpec(input) {
-  const trimmed = input.trim().replace(/\.git$/, '')
-  const m = trimmed.match(/^(?:https?:\/\/github\.com\/)?([^/]+)\/([^/]+)\/?$/)
-  if (!m) throw new Error('Use owner/repo or a GitHub URL')
+  const trimmed = input.trim().replace(/\/$/, '').replace(/\.git$/, '')
+  const m = trimmed.match(/^(?:https?:\/\/github\.com\/)?([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9_.-]+)$/i)
+  if (!m || /^\.+$/.test(m[2])) throw new Error('Use owner/repo or a GitHub repository URL, such as fisHarly0/gitviz.')
   return { owner: m[1], repo: m[2] }
 }
 
@@ -41,7 +50,7 @@ function mapCommit(c) {
 }
 
 export function createGithubAdapter({ owner, repo, token }) {
-  const octokit = new Octokit(token ? { auth: token } : {})
+  const octokit = new Octokit({ ...(token ? { auth: token } : {}), request: { timeout: 15000 } })
 
   return {
     kind: () => ADAPTER_KIND.GITHUB,

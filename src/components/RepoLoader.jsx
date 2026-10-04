@@ -8,15 +8,16 @@ import {
   savePAT,
 } from '../adapters/githubAdapter.js'
 
-export default function RepoLoader({ onLoaded }) {
-  const [mode, setMode] = useState('local')
+export default function RepoLoader({ onLoaded, desktop }) {
+  const [mode, setMode] = useState(desktop ? 'local' : 'github')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [pickedPath, setPickedPath] = useState('')
-  const [repoSpec, setRepoSpec] = useState('isomorphic-git/isomorphic-git')
-  const [pat, setPat] = useState(loadPAT())
+  const [repoSpec, setRepoSpec] = useState('fisHarly0/gitviz')
+  const [pat, setPat] = useState(loadPAT)
 
   async function handlePickFolder() {
+    if (busy || !desktop) return
     setError('')
     setBusy(true)
     try {
@@ -26,7 +27,6 @@ export default function RepoLoader({ onLoaded }) {
         title: 'Pick repo folder (containing .git)',
       })
       if (!path) {
-        setBusy(false)
         return
       }
       setPickedPath(path)
@@ -35,50 +35,77 @@ export default function RepoLoader({ onLoaded }) {
       const branches = await adapter.listBranches()
       if (branches.length === 0) {
         throw new Error(
-          'No git refs found. Pick the repo root (the folder containing .git).',
+          'This repository has no local branches. Create a commit in Git first, then open the repository root.',
         )
       }
-      setBusy(false)
       onLoaded(adapter)
     } catch (err) {
-      setBusy(false)
       setError(err.message || String(err))
+    } finally {
+      setBusy(false)
     }
   }
 
-  async function handleGithubLoad() {
+  async function handleGithubLoad(event) {
+    event.preventDefault()
+    if (busy) return
     setError('')
+    setBusy(true)
     try {
       const { owner, repo } = parseRepoSpec(repoSpec)
-      savePAT(pat)
+      const token = pat.trim()
       const adapter = createGithubAdapter({
         owner,
         repo,
-        token: pat || undefined,
+        token: token || undefined,
       })
-      await adapter.listBranches()
+      const branches = await adapter.listBranches()
+      if (branches.length === 0) {
+        throw new Error('This repository has no branches yet. Push a commit to GitHub, then try again.')
+      }
+      savePAT(token)
       onLoaded(adapter)
     } catch (err) {
-      setError(err.message || String(err))
+      const messages = {
+        401: 'GitHub rejected this token. Update it, or clear it to browse a public repository.',
+        403: 'GitHub denied access or the API limit was reached. Check token permissions or try again later.',
+        404: 'Repository not found or not accessible. Check owner/repo and token access for private repositories.',
+        429: 'GitHub API limit reached. Wait a moment and try again.',
+      }
+      setError(messages[err.status] || err.message || 'Could not connect to GitHub. Check your connection and try again.')
+    } finally {
+      setBusy(false)
     }
   }
 
   return (
-    <div className="repo-loader">
+    <div className="repo-loader" aria-busy={busy}>
       <div className="mode-tabs">
         <button
           className={mode === 'local' ? 'tab active' : 'tab'}
+          disabled={busy || !desktop}
+          aria-pressed={mode === 'local'}
+          title={desktop ? 'Open a local repository' : 'Local repositories require the desktop app'}
           onClick={() => setMode('local')}
         >
           Local repo
         </button>
         <button
           className={mode === 'github' ? 'tab active' : 'tab'}
+          disabled={busy}
+          aria-pressed={mode === 'github'}
           onClick={() => setMode('github')}
         >
           GitHub
         </button>
       </div>
+
+      {!desktop && (
+        <p className="hint runtime-hint">
+          Browser mode: browse GitHub repositories read-only. To open local folders,
+          start the desktop app with <code>npm run desktop:dev</code>.
+        </p>
+      )}
 
       {mode === 'local' && (
         <div className="mode-body">
@@ -98,13 +125,17 @@ export default function RepoLoader({ onLoaded }) {
       )}
 
       {mode === 'github' && (
-        <div className="mode-body">
+        <form className="mode-body" onSubmit={handleGithubLoad}>
           <label>
             Repo (owner/repo or URL)
             <input
               value={repoSpec}
               onChange={(e) => setRepoSpec(e.target.value)}
-              placeholder="isomorphic-git/isomorphic-git"
+              placeholder="fisHarly0/gitviz"
+              disabled={busy}
+              required
+              autoCapitalize="none"
+              spellCheck={false}
             />
           </label>
           <label>
@@ -114,17 +145,22 @@ export default function RepoLoader({ onLoaded }) {
               value={pat}
               onChange={(e) => setPat(e.target.value)}
               placeholder="ghp_..."
+              disabled={busy}
+              autoComplete="off"
+              spellCheck={false}
             />
             <small>
-              Stored in sessionStorage only. Cleared when you close this tab.
-              Without a token, GitHub allows 60 requests per hour.
+              Kept for this tab only when session storage is available. Public repositories
+              work without a token; use read-only access for private repositories.
             </small>
           </label>
-          <button onClick={handleGithubLoad}>Load</button>
-        </div>
+          <button type="submit" disabled={busy || !repoSpec.trim()}>
+            {busy ? 'Loading repository...' : 'Load repository'}
+          </button>
+        </form>
       )}
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
     </div>
   )
 }
