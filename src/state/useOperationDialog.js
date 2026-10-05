@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export default function useOperationDialog() {
   const [request, setRequest] = useState(null), pending = useRef(null)
   const [busy, setBusy] = useState(false), active = useRef(false)
+  const isActive = useCallback(() => active.current || Boolean(pending.current), [])
   const run = useCallback(async action => {
-    if (active.current) throw new Error('另一个 Git 操作正在进行，请稍后重试。')
+    if (active.current || pending.current) throw new Error('另一个操作或确认正在进行，请稍后重试。')
     active.current = true; setBusy(true)
     try { return await action() } finally { active.current = false; setBusy(false) }
   }, [])
@@ -14,5 +15,5 @@ export default function useOperationDialog() {
   }), [settle])
   const answer = useCallback(value => { settle(value); setRequest(null) }, [settle])
   useEffect(() => () => settle(false), [settle])
-  return { request, confirm, answer, busy, run }
+  return { request, confirm, answer, busy, run, isActive }
 }

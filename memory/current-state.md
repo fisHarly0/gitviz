@@ -6,7 +6,9 @@
 
 用户在 0.2.0 推送后授权持续完善至公开产品交付标准。验收入口：`spec/modules/public-product.md`；决策：`docs/decisions/2026-10-04-public-product.md`。基线 main / decad8e，开始时工作树干净。先统一桌面真实 Git 写入与失败恢复，再完善地图概览/折叠和发布 CI。以下 0.2.0 记录为已完成基线，不代表当前完整目标已达成。
 
-2026-10-05 已接通三端持久操作记录与失败提交继续入口：共用 JSON v1、按 worktree 隔离、确认前后核对 HEAD/分支/index tree/工作文件，保留备份和错误；桌面编辑未结束时禁止继续其他提交。Rust/Node 双向续交测试通过；DSH 实机发现宿主没有 `useEffectEvent`，已改用兼容 Hook。当前接续见 `memory/handoff-2026-10-05-operation-recovery.md`，上批桌面动作见 `memory/handoff-2026-10-05-desktop-actions.md`。仍缺应用关闭保护、部分三端预览一致性和后续 P2/P3；持续推进，公开产品目标未完成。
+2026-10-05 已加入桌面正常窗口关闭保护：内容/提交说明草稿取消后保留；已有 Git 或编辑确认不被覆盖；Git 操作和整个导出占用同一门禁；失败保存后关闭仍保留文件/index/恢复记录。20 项前端测试、lint、桌面 release 构建与 6 组独立原生窗口场景通过，包括真实 hook 和导出保存框。当前接续见 `memory/handoff-2026-10-05-desktop-close.md`。仍缺部分三端确认一致性、异常进程/超时和插件宿主退出边界，以及后续 P2/P3；公开产品目标保持未完成。
+
+前批已接通三端持久操作记录与失败提交继续入口：共用 JSON v1、按 worktree 隔离、确认前后核对 HEAD/分支/index tree/工作文件，保留备份和错误；桌面编辑未结束时禁止继续其他提交。Rust/Node 双向续交测试通过；DSH 实机发现宿主没有 `useEffectEvent`，已改用兼容 Hook。见 `memory/handoff-2026-10-05-operation-recovery.md`；上批桌面动作见 `memory/handoff-2026-10-05-desktop-actions.md`。
 
 - 项目定位：游戏存档式 Git 可视化。现有 Tauri 2 + Rust(gix) 桌面应用，以及 VS Code / DSH 交互式版本树插件。
 - 当前状态：0.2.0 三端大历史地图已完成；桌面原生 / VS Code / DSH 均通过 10000 条实机检查，Node / Rust 的 2000/5000/10000 历史测试通过。三个本地包及 SHA-256 位于 artifacts/。旧桌面写入、if 导出、diff 和 GitHub 只读浏览保留；MSI/NSIS 安装包尚未完成。

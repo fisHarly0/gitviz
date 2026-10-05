@@ -10,12 +10,12 @@ async function getJSZip() {
   return mod.default || mod
 }
 
-export default function ExportButton({ adapter, branchName }) {
+export default function ExportButton({ adapter, branchName, disabled }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   const handleExport = async () => {
-    if (busy) return
+    if (busy || disabled) return
     if (typeof adapter.exportBranchAsBundle !== 'function') {
       setError('adapter does not support export')
       return
@@ -23,6 +23,7 @@ export default function ExportButton({ adapter, branchName }) {
     setBusy(true)
     setError('')
     try {
+      await adapter.runTask(async () => {
       const { objects, ref, headOid } = await adapter.exportBranchAsBundle(branchName)
 
       // 先弹保存对话框, 用户取消就直接退出
@@ -76,6 +77,7 @@ Notes:
       const zipBytes = await zip.generateAsync({ type: 'uint8array' })
       // Tauri 2 webview 不接 a.click + blob URL 下载, 必须走 dialog.save + Rust 写盘
       await invoke('save_export_zip', { path: targetPath, bytes: Array.from(zipBytes) })
+      })
     } catch (err) {
       setError(err?.message || String(err))
     } finally {
@@ -85,7 +87,7 @@ Notes:
 
   return (
     <>
-      <button onClick={handleExport} disabled={busy} className="export-btn" title={`Export ${branchName} as .zip`}>
+      <button onClick={handleExport} disabled={busy || disabled} className="export-btn" title={`Export ${branchName} as .zip`}>
         {busy ? 'Packing...' : `↓ Export ${branchName}`}
       </button>
       {error && <span className="export-error">! {error}</span>}

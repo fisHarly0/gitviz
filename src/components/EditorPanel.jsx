@@ -6,7 +6,7 @@
 //   onSave(content, commitMessage)  写文件 + commit · async · 返回新 HEAD oid 或 throw
 //   onCancel          放弃修改返回 detail 视图
 
-import { Suspense, lazy, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 
 const Editor = lazy(() => import('@monaco-editor/react'))
 
@@ -63,11 +63,21 @@ export default function EditorPanel({
   onSave,
   onCancel,
   confirm,
+  onDraft,
 }) {
   const [content, setContent] = useState(initialContent ?? '')
   const [commitMsg, setCommitMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const draft = useRef({ content: initialContent ?? '', message: '' })
+  const reportDraft = (changes) => {
+    Object.assign(draft.current, changes)
+    onDraft?.({ path: filepath, dirty: draft.current.content !== (initialContent ?? '') || draft.current.message.length > 0 })
+  }
+  useEffect(() => {
+    onDraft?.({ path: filepath, dirty: draft.current.content !== (initialContent ?? '') || draft.current.message.length > 0 })
+    return () => onDraft?.(null)
+  }, [filepath, initialContent, onDraft])
 
   const handleSave = async () => {
     if (busy) return
@@ -97,7 +107,7 @@ export default function EditorPanel({
             type="text"
             placeholder={`commit msg (defaults to "edit ${filepath}")`}
             value={commitMsg}
-            onChange={(e) => setCommitMsg(e.target.value)}
+            onChange={(e) => { reportDraft({ message: e.target.value }); setCommitMsg(e.target.value) }}
             className="commit-msg-input"
             maxLength={200}
             disabled={busy}
@@ -109,7 +119,7 @@ export default function EditorPanel({
           >
             {busy ? 'Committing...' : 'Save & Commit'}
           </button>
-          <button onClick={async () => { if (content === initialContent || await confirm?.()) onCancel() }} disabled={busy} className="cancel-btn">
+          <button onClick={async () => { if ((content === (initialContent ?? '') && !commitMsg) || await confirm?.()) onCancel() }} disabled={busy} className="cancel-btn">
             Cancel
           </button>
         </div>
@@ -124,8 +134,9 @@ export default function EditorPanel({
             language={detectLanguage(filepath)}
             theme="vs-dark"
             value={content}
-            onChange={(v) => setContent(v ?? '')}
+            onChange={(v) => { reportDraft({ content: v ?? '' }); setContent(v ?? '') }}
             options={{
+              readOnly: busy,
               minimap: { enabled: false },
               fontSize: 13,
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',

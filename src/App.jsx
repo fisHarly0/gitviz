@@ -12,6 +12,7 @@ import { openRepo, createTauriAdapter } from './adapters/tauriAdapter.js'
 import './App.css'
 import OperationDialog from './components/OperationDialog.jsx'
 import useOperationDialog from './state/useOperationDialog.js'
+import useDesktopCloseGuard from './state/useDesktopCloseGuard.js'
 import DesktopActions from './components/DesktopActions.jsx'
 import OperationHistory from './version-tree/OperationHistory.jsx'
 
@@ -26,7 +27,14 @@ export default function App() {
   const [repoSnapshot, setRepoSnapshot] = useState(null)
   const session = useSession()
   const operation = useOperationDialog()
-  const runOperation = operation.run, confirmOperation = operation.confirm
+  const closeGuard = useDesktopCloseGuard(desktop, operation)
+  const { isReady } = closeGuard
+  const { run, confirm: confirmOperation } = operation
+  const runOperation = useCallback(action => {
+    if (!isReady()) return Promise.reject(new Error('关闭保护尚未准备好，请稍后重试或重启应用。'))
+    return run(action)
+  }, [run, isReady])
+  const blocked = operation.busy || !closeGuard.ready
   const setupRepo = session.setupRepo
   const acceptAdapter = useCallback(a => {
     setupRepo([], null, '')
@@ -118,13 +126,15 @@ export default function App() {
   if (!adapter) {
     return (
       <div className={dragOver ? 'app start drag-over' : 'app start'}>
+        <OperationDialog request={operation.request} onAnswer={operation.answer} notice={closeGuard.notice}/>
+        {closeGuard.notice && !operation.request && <p className="close-notice" role="alert">{closeGuard.notice}</p>}
         <header className="app-header">
           <h1>gitviz</h1>
           <p>Browse Git history as a timeline of save points.</p>
           <p className="tagline">{desktop ? 'Preview past commits, then create an if-line to experiment.' : 'Explore branches and changes in a GitHub repository.'}</p>
           {desktop && <p className="drop-hint">Tip: drop a repository folder here to open it.</p>}
         </header>
-        <RepoLoader desktop={desktop} confirm={operation.confirm} run={operation.run} onLoaded={acceptAdapter} />
+        <RepoLoader desktop={desktop} confirm={operation.confirm} run={runOperation} onLoaded={acceptAdapter} />
         {dropError && <div className="error drop-error">{dropError}</div>}
         {dragOver && <div className="drop-overlay">Drop folder to open</div>}
       </div>
@@ -146,7 +156,8 @@ export default function App() {
 
   return (
     <div className={dragOver ? 'app loaded drag-over' : 'app loaded'}>
-      <OperationDialog request={operation.request} onAnswer={operation.answer}/>
+      <OperationDialog request={operation.request} onAnswer={operation.answer} notice={closeGuard.notice}/>
+      {closeGuard.notice && !operation.request && <p className="close-notice" role="alert">{closeGuard.notice}</p>}
       {dragOver && <div className="drop-overlay">Drop folder to switch repo</div>}
       {dropError && <div className="error drop-error">{dropError}</div>}
       <header className="app-header">
@@ -157,7 +168,7 @@ export default function App() {
           {adapter.repo && <span className="source-repo-path" title={adapter.repo}>{adapter.repo}</span>}
           <button
             className="switch"
-            disabled={Boolean(session.editingFile) || operation.busy}
+            disabled={Boolean(session.editingFile) || blocked}
             onClick={() => {
               setAdapter(null)
             }}
@@ -184,7 +195,7 @@ export default function App() {
             mainBranch={session.mainBranch}
             adapter={adapter}
             headOid={session.headOid}
-            editing={Boolean(session.editingFile) || operation.busy}
+            editing={Boolean(session.editingFile) || blocked}
             dirty={Boolean(repoSnapshot?.dirty)}
             onRefresh={handleCommitted}
             onSwitched={(name, oid) => { session.switchToBranch(name, oid); handleCommitted() }}
@@ -195,7 +206,7 @@ export default function App() {
             selectedOid={session.viewingOid}
             refreshKey={refreshKey}
             editing={Boolean(session.editingFile)}
-            blocked={operation.busy}
+            blocked={blocked}
             onSnapshot={snapshot => {
               setRepoSnapshot(snapshot)
               setBranches(snapshot.branches.filter(ref => !ref.remote))
@@ -209,7 +220,7 @@ export default function App() {
             adapter={adapter}
             oid={session.viewingOid}
             snapshot={repoSnapshot}
-            blocked={Boolean(session.editingFile) || operation.busy}
+            blocked={Boolean(session.editingFile) || blocked}
             editing={Boolean(session.editingFile)}
             onRefresh={handleCommitted}
             onOpenWorktree={openLocalPath}
@@ -218,7 +229,7 @@ export default function App() {
               handleCommitted()
             }}
           />}
-          {adapter.kind() === 'local' && <OperationHistory key={`operations-${adapter.historyId}`} load={params => adapter.historyRequest('operations', params)} refreshKey={`${refreshKey}-${operation.busy}`} blocked={operation.busy} editing={Boolean(session.editingFile)} onResume={async record => {
+          {adapter.kind() === 'local' && <OperationHistory key={`operations-${adapter.historyId}`} load={params => adapter.historyRequest('operations', params)} refreshKey={`${refreshKey}-${operation.busy}`} blocked={blocked} editing={Boolean(session.editingFile)} onResume={async record => {
             try {
               const result = await adapter.performAction({ action: 'resumeCommit', id: record.id }, { head: session.headOid, branch: session.currentBranch })
               if (!result.cancelled) {
@@ -235,6 +246,8 @@ export default function App() {
             adapter={adapter}
             oid={session.viewingOid}
             session={session}
+            onDraft={closeGuard.onDraft}
+            blocked={blocked}
             onCommitted={handleCommitted}
           />
         </section>

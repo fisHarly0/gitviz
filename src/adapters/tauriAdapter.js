@@ -16,6 +16,7 @@ export function createTauriAdapter({ repo, confirm, run } = {}) {
     kind: () => ADAPTER_KIND.LOCAL,
     repo,
     historyId: crypto.randomUUID(),
+    runTask: run,
     confirmDiscard: () => confirm({ title: '放弃当前编辑？', impact: '尚未保存到磁盘的编辑内容将丢弃。已经创建的分支和已保存的文件会保留。', confirmLabel: '放弃编辑' }),
 
     async historyRequest(method, params = {}) {

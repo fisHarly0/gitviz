@@ -82,7 +82,7 @@ export default function IfLinesPanel({
         )}
         {isIfBranch(currentBranch) && typeof adapter.exportBranchAsBundle === 'function' && (
           <span className="export-slot">
-            <ExportButton adapter={adapter} branchName={currentBranch} />
+            <ExportButton adapter={adapter} branchName={currentBranch} disabled={busy || editing} />
           </span>
         )}
       </div>

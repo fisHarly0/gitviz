@@ -69,7 +69,7 @@ function PatchView({ patch }) {
   )
 }
 
-export default function CommitDetail({ adapter, oid, session, onCommitted }) {
+export default function CommitDetail({ adapter, oid, session, onCommitted, onDraft, blocked }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -121,7 +121,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
     typeof adapter.forkEdit === 'function'
 
   const handleEdit = async (filepath) => {
-    if (!session || editBusy) return
+    if (!session || editBusy || blocked) return
     setEditBusy(true)
     setEditError('')
     try {
@@ -167,6 +167,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
         onSave={handleSaveCommit}
         onCancel={handleCancelEdit}
         confirm={adapter.confirmDiscard}
+        onDraft={onDraft}
       />
     )
   }
@@ -201,7 +202,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
               {canEdit && f.status !== 'remove' && (
                 <button
                   className="edit-file-btn"
-                  disabled={editBusy}
+                  disabled={editBusy || blocked}
                   onClick={() => handleEdit(f.path)}
                   title={
                     session.mode === 'preview'
@@ -234,7 +235,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted }) {
 }
 
 // 进入 edit 模式后异步拉初始内容（从 sourceOid 时刻读文件 · 不是从当前 HEAD）
-function EditEnter({ adapter, filepath, ifBranchName, sourceOid, onSave, onCancel, confirm }) {
+function EditEnter({ adapter, filepath, ifBranchName, sourceOid, onSave, onCancel, confirm, onDraft }) {
   const [initial, setInitial] = useState(null)
   const [error, setError] = useState('')
 
@@ -268,6 +269,7 @@ function EditEnter({ adapter, filepath, ifBranchName, sourceOid, onSave, onCance
       onSave={onSave}
       onCancel={onCancel}
       confirm={confirm}
+      onDraft={onDraft}
     />
   )
 }

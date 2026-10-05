@@ -50,6 +50,19 @@ input:focus-visible {
 .runtime-hint {
   margin-bottom: 18px;
 }
+.close-notice {
+  margin: 8px 16px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.operation-dialog .close-notice {
+  margin: 12px 0;
+}
 .repo-loader .error {
   overflow-wrap: anywhere;
 }
