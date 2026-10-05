@@ -752,6 +752,42 @@ mod tests {
         assert!(f.perform(Action::CreateBranch { name: "@{-1}".into(), oid: f.first.clone() }).is_err());
     }
     #[test]
+    fn linked_edit_paths_are_rejected_without_touching_the_external_target() {
+        let f = Fixture::new();
+        let tracked = f.root.join("tracked-directory");
+        fs::create_dir(&tracked).unwrap(); fs::write(tracked.join("file.txt"), "outside content\n").unwrap();
+        git(&f.root, &["add", "--", "tracked-directory/file.txt"]).unwrap();
+        git(&f.root, &["commit", "-m", "tracked directory"]).unwrap();
+        let before_head = head(&f.root).unwrap(); let index = fs::read(f.root.join(".git/index")).unwrap();
+        let outside = f.root.with_extension("link-target");
+        assert!(outside.is_absolute() && outside.starts_with(f.root.parent().unwrap()) && !outside.starts_with(&f.root));
+        assert!(!outside.exists());
+        fs::rename(&tracked, &outside).unwrap();
+        // A junction needs no Windows symlink privilege; Unix uses a real symlink.
+        let mut command = Command::new("node");
+        command.args(["-e", "require('node:fs').symlinkSync(process.argv[1],process.argv[2],process.platform==='win32'?'junction':'dir')"])
+            .arg(&outside).arg(&tracked);
+        #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
+        let output = command.output().unwrap(); assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        let path_error = edit_path(&f.root, "tracked-directory/file.txt").unwrap_err();
+        assert!(path_error.contains("链接") || path_error.contains("重解析"), "{path_error}");
+        let action = Action::SaveEdit { path: "tracked-directory/file.txt".into(), content: "must not write\n".into(), message: "blocked linked edit".into() };
+        let error = f.perform(action).unwrap_err();
+        // Git also reports a replaced directory as dirty on Unix; either guard
+        // must reject the operation, while edit_path above proves link detection.
+        assert!(error.contains("链接") || error.contains("重解析") || error.contains("未提交"), "{error}");
+        assert_eq!(head(&f.root).unwrap(), before_head);
+        assert_eq!(fs::read(f.root.join(".git/index")).unwrap(), index);
+        assert_eq!(fs::read_to_string(outside.join("file.txt")).unwrap(), "outside content\n");
+        assert!(journal::list(&f.root, None, 30).unwrap()["records"].as_array().unwrap().is_empty());
+        #[cfg(unix)] {
+            let file = f.root.join("中文.txt"); let external = outside.join("direct-file.txt");
+            fs::rename(&file, &external).unwrap(); std::os::unix::fs::symlink(&external, &file).unwrap();
+            assert!(edit_path(&f.root, "中文.txt").unwrap_err().contains("链接"));
+            assert_eq!(fs::read_to_string(&external).unwrap(), "second\n");
+        }
+    }
+    #[test]
     fn restore_retains_history_and_worktree_creation_leaves_original_untouched() {
         let f = Fixture::new();
         let result = f.perform(Action::CreateWorktree { name: "trial".into(), oid: f.first.clone(), directory: f.root.parent().unwrap().join("worktrees").to_string_lossy().into_owned() }).unwrap();

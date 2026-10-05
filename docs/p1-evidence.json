@@ -1,0 +1,275 @@
+{
+  "sourceBaseline": "601c4773d08baceb4c69c859a54e78f1ac0a5df3",
+  "evidenceRoot": "F:/Codex/work/gitviz-product",
+  "note": "Historical results inspected during the P1 audit, not newly rerun host tests. Scopes and limitations are documented in p1-acceptance.md.",
+  "items": [
+    {
+      "file": "actions-ui-result.json",
+      "sha256": "d6386823b996c6bb60940789e308b9ca0ff7d57fda1a14a1dd29f72f6ea396ff",
+      "observed": {
+        "branchCreationPreservesFiles": true,
+        "cancellationReadOnly": true,
+        "stalePreviewRejectedAndRetryWorks": true,
+        "restoreCreatesCommitAndBackup": true,
+        "dirtyWorktreeIndependent": true,
+        "opensLinkedWorktree": true,
+        "failedOpenKeepsPreviousRepository": true,
+        "detachedHeadCorrect": true,
+        "hookFailurePreservesData": true,
+        "errors": []
+      }
+    },
+    {
+      "file": "actions-editor-result.json",
+      "sha256": "2c54b851c85fd8f22fc21e61b67617968ad4e81d4ea6a92e2d84a6fd1c3e15d4",
+      "observed": {
+        "previewReadOnly": true,
+        "cancelReadOnly": true,
+        "forkSyncsFiles": true,
+        "unsavedNavigationBlocked": true,
+        "externalHeadDoesNotRebaseEditor": true,
+        "staleSaveRejectedWithoutLosingBuffer": true,
+        "discardConfirmation": true,
+        "saveUsesGitIdentity": true,
+        "saveCleanIndex": true,
+        "switchSyncsFiles": true,
+        "errors": []
+      }
+    },
+    {
+      "file": "confirmation-vscode-result.json",
+      "sha256": "7944597a76b8988aebea93d6c2a80ac70a9d4bf7727bc047021ad0d026740b5f",
+      "observed": {
+        "branchAndWorktreeFinalConfirmation": true,
+        "cancelReadOnly": true,
+        "fullTargetAndFilePreview": true,
+        "movedTargetRejected": true
+      }
+    },
+    {
+      "file": "confirmation-dsh-result.json",
+      "sha256": "24bf18ba4d3c4a4fe88788e1e92c98cf263f5f2b23e539858899fe0d979beab4",
+      "observed": {
+        "branchAndWorktreeFinalConfirmation": true,
+        "cancelReadOnly": true,
+        "fullTargetAndFilePreview": true,
+        "movedTargetRejected": true
+      }
+    },
+    {
+      "file": "close-tests/close-result.json",
+      "sha256": "b109e249ecfc2e2f91a0581412facaaef1ee87b9dad031ecf1ebc33c0756e07e",
+      "observed": {
+        "cleanStartupCloses": true,
+        "untouchedEditorCloses": true,
+        "messageOnlyProtected": true,
+        "repeatedCloseCoalesced": true,
+        "cancelPreservesBufferAndMessage": true,
+        "discardDoesNotWriteGit": true,
+        "nativeExportDialogBlocksCloseAndCancelReleasesGate": true,
+        "existingConfirmationPreserved": true,
+        "runningHookBlocksClose": true,
+        "successfulSaveThenCloses": true,
+        "failedSavePreservesFilesIndexRecordAndDraft": true,
+        "errors": []
+      }
+    },
+    {
+      "file": "native-failure-tests/native-failure-desktop.json",
+      "sha256": "28fdf516f7a3fe34829d94a17e9a4a79265e6dabcdabb01f657935e58ad7ab20",
+      "observed": {
+        "occupiedBranchRejected": true,
+        "lateIndexLockRejected": true,
+        "indexAndFilesPreserved": true,
+        "realRefPermissionDenial": true,
+        "cancelReadOnly": true,
+        "recoveredParentTreeBackup": true,
+        "errors": [],
+        "actualPositionRefreshed": true
+      }
+    },
+    {
+      "file": "native-failure-tests/native-failure-vscode.json",
+      "sha256": "ce1ab91d48000a6d911ba637f55455b709a9a6cb470e7d432fd7c3dc69797050",
+      "observed": {
+        "occupiedBranchRejected": true,
+        "lateIndexLockRejected": true,
+        "indexAndFilesPreserved": true,
+        "realRefPermissionDenial": true,
+        "cancelReadOnly": true,
+        "recoveredParentTreeBackup": true,
+        "errors": []
+      }
+    },
+    {
+      "file": "native-failure-tests/native-failure-dsh.json",
+      "sha256": "96c874673326e67354abc5e70a417cbcf5ee773278a9c1388d1130632b561671",
+      "observed": {
+        "occupiedBranchRejected": true,
+        "lateIndexLockRejected": true,
+        "indexAndFilesPreserved": true,
+        "realRefPermissionDenial": true,
+        "cancelReadOnly": true,
+        "recoveredParentTreeBackup": true,
+        "errors": []
+      }
+    },
+    {
+      "file": "native-failure-tests/dsh-lifecycle-native.json",
+      "sha256": "7b89d72da050b3b32372144a87293dcba0e551f984fed96eaa04ff027cd07cf7",
+      "observed": {
+        "installedPackage": true,
+        "pluginManagerDisabledDuringHook": true,
+        "sidebarAndStylesReleased": true,
+        "completedWhileDisabled": true,
+        "reEnabledRecordVisible": true,
+        "exactParentAndTree": true,
+        "clean": true,
+        "lockReleased": true
+      }
+    },
+    {
+      "file": "recovery-vscode-result.json",
+      "sha256": "9522c7f4f4ac4d8afb153a979c8a2e5ead8de6351b3d315c2b829682b89a7ef4",
+      "observed": {
+        "installedPackage": true,
+        "nativeConfirmation": true,
+        "cancelReadOnly": true,
+        "externalChangesRejected": true,
+        "restoreResumed": true,
+        "exactTreeParentBackup": true
+      }
+    },
+    {
+      "file": "recovery-dsh-result.json",
+      "sha256": "2e8d8d4305204cd23a3b21e87cfa9606ab7bf23e878eef16156a80bd57b1a758",
+      "observed": {
+        "installedPackageAfterRestart": true,
+        "confirmation": true,
+        "cancelReadOnly": true,
+        "changedFilesRejected": true,
+        "exactTreeParentBackup": true,
+        "persistedAfterPageReload": true,
+        "errors": []
+      }
+    },
+    {
+      "file": "lifecycle-native/lifecycle-vscode-result.json",
+      "sha256": "faff98e557aa4c9e550837bcabe8c0ff2873aa49f250befb1048d384c7a46845",
+      "observed": {
+        "installedPackage": true,
+        "nativeConfirmation": true,
+        "panelCloseAndReopen": true,
+        "applicationQuitDuringHook": true,
+        "lockReleased": true
+      }
+    },
+    {
+      "file": "native-concurrency-030/result.json",
+      "sha256": "100e799d73fa4ff4f10a947d71c75b961a589b5eec0baecfda3604d0d2064437",
+      "observed": {
+        "passed": true,
+        "rounds": [
+          {
+            "owner": "desktop",
+            "rejectedWhileLocked": "vscode",
+            "concurrentRejection": "另一个 Gitviz 写操作正在进行；若上次异常退出，请先检查 Git 状态与操作记录。",
+            "rejectedStaleConfirmation": "dsh",
+            "before": "484149bac6bd488ba0e9af3f8610e68ed0359e99",
+            "target": "5ccb22b65536c3f641e332fc687f38d60b5d42f0",
+            "head": "b04da733657b136d790a0d552f64ef075ca23f01",
+            "operationId": "01a10b7db1ed-426b91092c9bd60014f8017853ce36ed",
+            "lockPID": 24700,
+            "concurrentRejectionPreservedStateAndJournal": true,
+            "staleRejectionPreservedStateAndJournal": true,
+            "parentTreeBackupClean": true,
+            "allHostsRefreshed": true
+          },
+          {
+            "owner": "vscode",
+            "rejectedWhileLocked": "dsh",
+            "concurrentRejection": "另一个 Gitviz 写操作正在进行；若上次异常退出，请先检查 Git 状态与操作记录。",
+            "rejectedStaleConfirmation": "desktop",
+            "before": "b04da733657b136d790a0d552f64ef075ca23f01",
+            "target": "484149bac6bd488ba0e9af3f8610e68ed0359e99",
+            "head": "0b4eee12022f6cad18fd12ed3137ec467bf857f0",
+            "operationId": "01a10b7df802-a5b9031f90e7495999e8031bb5b20133",
+            "lockPID": 10196,
+            "concurrentRejectionPreservedStateAndJournal": true,
+            "staleRejectionPreservedStateAndJournal": true,
+            "parentTreeBackupClean": true,
+            "allHostsRefreshed": true
+          },
+          {
+            "owner": "dsh",
+            "rejectedWhileLocked": "desktop",
+            "concurrentRejection": "历史已变化，请重新预览操作。刷新实际状态",
+            "rejectedStaleConfirmation": "vscode",
+            "before": "0b4eee12022f6cad18fd12ed3137ec467bf857f0",
+            "target": "5ccb22b65536c3f641e332fc687f38d60b5d42f0",
+            "head": "38dfe70c94166eb823087e825468bf1cfa8988ee",
+            "operationId": "01a10b7e3d12-48386271bcd2459cb822d3d4ed06e11d",
+            "lockPID": 39004,
+            "concurrentRejectionPreservedStateAndJournal": true,
+            "staleRejectionPreservedStateAndJournal": true,
+            "parentTreeBackupClean": true,
+            "allHostsRefreshed": true
+          }
+        ],
+        "sameGitRevisionJournalRefresh": true,
+        "crossHostFailureResumedByDesktop": true
+      }
+    },
+    {
+      "file": "trial-desktop-final/result.json",
+      "sha256": "be314cd487317b72e108ed61ab2de336d4441d5f0e2af7f8f24c8a6b38e12329",
+      "observed": {
+        "host": "desktop",
+        "previewReadOnly": true,
+        "cancellationReadOnly": true,
+        "trialStartsAtSelection": true,
+        "originalFilesAndIndexPreserved": true,
+        "returnPreservesTrial": true,
+        "actualNativeUI": true
+      }
+    },
+    {
+      "file": "trial-vscode-final/result.json",
+      "sha256": "e11f92ebddb95b6c1b10e2f7c7c90e358f99e6654c27281baa329d9b0ee12d36",
+      "observed": {
+        "host": "vscode",
+        "previewReadOnly": true,
+        "cancellationReadOnly": true,
+        "trialStartsAtSelection": true,
+        "originalFilesAndIndexPreserved": true,
+        "returnPreservesTrial": true,
+        "actualNativeUI": true
+      }
+    },
+    {
+      "file": "trial-dsh/result.json",
+      "sha256": "e8213a3251475ea476a380906e220d41ce4db5c2ef4886d1b9ace7d6fc53bb2c",
+      "observed": {
+        "host": "dsh",
+        "previewReadOnly": true,
+        "cancellationReadOnly": true,
+        "trialStartsAtSelection": true,
+        "originalFilesAndIndexPreserved": true,
+        "returnPreservesTrial": true,
+        "actualNativeUI": true
+      }
+    },
+    {
+      "file": "signing-node-result.json",
+      "sha256": "ab698183edc0660940293e003a010f09288419366541881e5ad7dc29fa2e3f83",
+      "observed": {
+        "passed": 2,
+        "failed": 0,
+        "checks": [
+          "signed restore verified by git verify-commit; identity, parent, target tree and backup checked",
+          "missing signing key preserves HEAD, worktree, index and checkpoint; reopened service resumes signed commit with same parent/tree/backup"
+        ]
+      }
+    }
+  ]
+}
