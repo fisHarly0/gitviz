@@ -14,9 +14,17 @@
 
 Windows CI 超时测试中 hook 父子进程已死、心跳停止，继续提交却被 processUncertain 阻止。原始日志 delivery-ci-windows-tests-failure.log；错误原因此前被吞掉。git-process.cjs 现在保留 cleanupError，测试在首个错误处检查 GIT_TIMEOUT 并输出底层清理错误，不修改未知状态下的写锁保护。当前只增加诊断，尚未证明根因或修复。
 
-本机 PowerShell 10 次、Git Bash 5 次针对性重复均通过；45 项插件测试、lint、前端 build 通过。Git 本机为 2.49.0.windows.1，CI 为 2.55.0.windows.5，尚不能据此归因。DSH 回归 10/10 通过（会话 3079 已结束）。
+本机 PowerShell 10 次、Git Bash 5 次针对性重复均通过；45 项插件测试、10 项 DSH 测试、lint、前端 build 通过。另从官方 release 下载并核对 digest 的 MinGit 2.55.0.windows.5，在 F:/Codex/work/gitviz-product/git-ci-version 使用，同版本再测 10 次通过。原系统 Git 2.49.0 不变；所有本机测试会话均已结束。不能据此排除偶发清理失败。
 
-Windows 安装冒烟新增至 CI，在新的 runner 临时路径测试安装/原生 UI/同版本重装/卸载，单独上传 JSON/PNG 证据；本机通过不等于 CI runner 通过。准备提交并推送这些诊断与安装检查后，跟踪新 run。不要重试到绿色就宣称偶发问题已修复；若再次失败读取明确 cleanupError，保留安全边界。
+Windows 安装冒烟新增至 CI，在新的 runner 临时路径测试安装/原生 UI/同版本重装/卸载，单独上传 JSON/PNG 证据；本机通过不等于 CI runner 通过。这些诊断与安装检查已提交推送 51a873c，新 run 37283842186（https://github.com/fisHarly0/gitviz/actions/runs/37283842186）。不要重试到绿色就宣称偶发问题已修复；若再次失败读取明确 cleanupError，保留安全边界。
+
+## 最新运行状态（此节为接续入口）
+
+- 51a873c 的 Linux job 111677938508 已全流程成功；下载目录 delivery-ci-linux-51a873c，源码/dirty=false/SHA/包内容及原生执行权限已验证。
+- Windows job 111677938796 已通过前端、45 项插件/DSH/历史测试与包校验，当前 Rust check/test 仍在运行；后面是 NSIS 和新安装冒烟。上一轮偶发超时清理问题没有复现，但未找到根因，不得标为已修复。
+- macOS job 111677938864 已通过检查和 Rust 测试，当前 Desktop build 仍在运行。按具体 job 查状态，不因构建等待较久重开流水线。
+- 上一提交 0d314f4 的 Linux/macOS 产物已下载至 delivery-ci-{linux,macos}-tar；全部 SHA/manifest/插件内容与 tar 内 755 权限通过，结果 delivery-ci-tar-check.json。
+- 本机没有活跃测试会话或自建应用；只有上述远程 CI 仍在运行。文档记录提交使用 [skip ci]，避免取消正在进行的有效构建。
 
 ## 下一步
 

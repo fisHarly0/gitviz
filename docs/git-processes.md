@@ -32,6 +32,8 @@
 
 Windows 上已验证真实 hook 派生进程的 PID 消失、心跳停止、文件和暂存内容保留，以及修复 hook 后继续提交；已覆盖清理失败时保留锁，以及主进程退出但输出未关闭的有界报错。Rust 与 Node 都有对应测试，插件包内的模块也执行同一组进程测试。
 
-Windows 使用精确进程 PID 的 `taskkill /T /F`；Unix 使用本次创建的独立进程组，尚未在 Linux/macOS 实测。不能保证捕获主动脱离进程树、关闭继承输出的后台任务，也不能撤销 hook 的外部副作用。插件已通过独立执行进程处理正常关闭和测试宿主 PID 被终止；完整验证范围见 [插件关闭行为](plugin-lifecycle.md)。强杀执行进程或整个进程树、断电和崩溃仍不保证完成。桌面旧 gix 读取和导出不属于本次 Git CLI 超时覆盖范围。
+Windows 使用精确进程 PID 的 `taskkill /T /F`；Unix 使用本次创建的独立进程组，Linux/macOS 的真实 Git 后端测试已在 CI 通过，原生界面仍未验收。不能保证捕获主动脱离进程树、关闭继承输出的后台任务，也不能撤销 hook 的外部副作用。插件已通过独立执行进程处理正常关闭和测试宿主 PID 被终止；完整验证范围见 [插件关闭行为](plugin-lifecycle.md)。强杀执行进程或整个进程树、断电和崩溃仍不保证完成。桌面旧 gix 读取和导出不属于本次 Git CLI 超时覆盖范围。
+
+Windows CI 曾出现子进程已停止、但底层清理结果无法确认的偶发失败；保护锁因此保留。现已增加清理错误诊断，本机重复和下一轮 CI 未复现，但尚未确认根因或消除该问题。遇到此提示仍须按上面的检查步骤处理。
 
 设计依据：[Node 子进程文档](https://nodejs.org/api/child_process.html)、[Microsoft taskkill 文档](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill)。测试入口：`tests/git-process.test.cjs` 与 `src-tauri/src/commands/operations.rs`。
