@@ -130,13 +130,13 @@ export default function App() {
         {closeGuard.notice && !operation.request && <p className="close-notice" role="alert">{closeGuard.notice}</p>}
         <header className="app-header">
           <h1>gitviz</h1>
-          <p>Browse Git history as a timeline of save points.</p>
-          <p className="tagline">{desktop ? 'Preview past commits, then create an if-line to experiment.' : 'Explore branches and changes in a GitHub repository.'}</p>
-          {desktop && <p className="drop-hint">Tip: drop a repository folder here to open it.</p>}
+          <p>把 Git 历史展开成可探索的版本地图。</p>
+          <p className="tagline">{desktop ? '先查看存档，再决定切换、恢复或创建试验分支。' : '只读查看 GitHub 仓库的分支与文件变化。'}</p>
+          {desktop && <p className="drop-hint">也可以把仓库文件夹拖到窗口中打开。</p>}
         </header>
         <RepoLoader desktop={desktop} confirm={operation.confirm} run={runOperation} onLoaded={acceptAdapter} />
         {dropError && <div className="error drop-error">{dropError}</div>}
-        {dragOver && <div className="drop-overlay">Drop folder to open</div>}
+        {dragOver && <div className="drop-overlay">松开以打开仓库</div>}
       </div>
     )
   }
@@ -158,12 +158,12 @@ export default function App() {
     <div className={dragOver ? 'app loaded drag-over' : 'app loaded'}>
       <OperationDialog request={operation.request} onAnswer={operation.answer} notice={closeGuard.notice}/>
       {closeGuard.notice && !operation.request && <p className="close-notice" role="alert">{closeGuard.notice}</p>}
-      {dragOver && <div className="drop-overlay">Drop folder to switch repo</div>}
+      {dragOver && <div className="drop-overlay">松开以打开另一个仓库</div>}
       {dropError && <div className="error drop-error">{dropError}</div>}
       <header className="app-header">
         <h1>gitviz</h1>
         <div className="source-info">
-          Source: {adapter.kind()}
+          {adapter.kind() === 'local' ? '本地仓库' : 'GitHub · 只读'}
           {adapter.spec ? ` (${adapter.spec.owner}/${adapter.spec.repo})` : ''}
           {adapter.repo && <span className="source-repo-path" title={adapter.repo}>{adapter.repo}</span>}
           <button
@@ -173,7 +173,7 @@ export default function App() {
               setAdapter(null)
             }}
           >
-            Switch repo
+            更换仓库
           </button>
         </div>
       </header>

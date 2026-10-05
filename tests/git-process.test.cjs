@@ -9,6 +9,18 @@ const quote = value => "'" + value.replaceAll('\\', '/').replaceAll("'", "'\\''"
 const hookScript = path.join(__dirname, 'helpers/slow-git-hook.cjs')
 const alive = pid => { try { process.kill(pid, 0); return true } catch (error) { if (error.code === 'ESRCH') return false; throw error } }
 
+test('missing executable retains the start cause and gives actionable Git setup guidance', async () => {
+  await fs.mkdir(root, { recursive: true })
+  const folder = await fs.mkdtemp(path.join(root, 'missing-git-'))
+  await assert.rejects(runGitProcess(path.join(folder, 'no-such-git'), ['--version'], { cwd: folder }), error => {
+    assert.equal(error.code, 'GIT_START'); assert.equal(error.cause.code, 'ENOENT')
+    assert.match(error.message, /git --version/); assert.match(error.message, /仓库目录/)
+    assert.match(error.message, /PATH/); assert.match(error.message, /重新打开/)
+    return true
+  })
+  assert.match(await runGitProcess('git', ['--version'], { cwd: folder }), /^git version /)
+})
+
 async function cleanupKnownFixture(f, owned) {
   if (!owned) return
   try { await terminateTree(owned) }

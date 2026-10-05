@@ -19,9 +19,9 @@ export default function ModeStatusBar({
   if (mode === 'browse') {
     content = (
       <>
-        <span className="tag browse">BROWSE</span>
+        <span className="tag browse">浏览</span>
         <span>
-          on <code>{currentBranch}</code> · HEAD = <code>{short(headOid)}</code>
+          {headOid ? <>实际位置 <code>{currentBranch || '游离 HEAD'}</code> · HEAD <code>{short(headOid)}</code></> : '尚无可显示的 HEAD'}
         </span>
       </>
     )
@@ -29,10 +29,10 @@ export default function ModeStatusBar({
     cls += ' preview'
     content = (
       <>
-        <span className="tag preview">PREVIEW</span>
+        <span className="tag preview">预览</span>
         <span>
-          looking at <code>{short(viewingOid)}</code> on <code>{currentBranch}</code> ·{' '}
-          {readOnly ? 'read-only GitHub history' : 'edit to fork an if-line'}
+          查看 <code>{short(viewingOid)}</code> · 实际 HEAD <code>{short(headOid)}</code> ·{' '}
+          {readOnly ? 'GitHub 只读' : '工作文件未切换'}
         </span>
       </>
     )
@@ -40,10 +40,9 @@ export default function ModeStatusBar({
     cls += ' edit'
     content = (
       <>
-        <span className="tag edit">EDIT</span>
+        <span className="tag edit">编辑</span>
         <span>
-          on if-line <code>{currentIfBranch}</code> · {changedFilesInIf} file
-          {changedFilesInIf === 1 ? '' : 's'} committed · Save &amp; Commit to write more
+          试验分支 <code>{currentIfBranch}</code> · 本次已提交 {changedFilesInIf} 次 · 保存并提交会写入工作文件
         </span>
       </>
     )

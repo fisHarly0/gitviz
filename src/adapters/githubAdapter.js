@@ -24,7 +24,7 @@ export function loadPAT() {
 export function parseRepoSpec(input) {
   const trimmed = input.trim().replace(/\/$/, '').replace(/\.git$/, '')
   const m = trimmed.match(/^(?:https?:\/\/github\.com\/)?([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9_.-]+)$/i)
-  if (!m || /^\.+$/.test(m[2])) throw new Error('Use owner/repo or a GitHub repository URL, such as fisHarly0/gitviz.')
+  if (!m || /^\.+$/.test(m[2])) throw new Error('请输入所有者/仓库名或 GitHub 仓库网址，例如 fisHarly0/gitviz。')
   return { owner: m[1], repo: m[2] }
 }
 

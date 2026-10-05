@@ -16,7 +16,7 @@ test('accepts repository names and copied GitHub clone URLs with a trailing slas
 
 test('rejects other hosts, nested pages, whitespace, and query strings', () => {
   for (const input of ['', 'a b/repo', 'owner/repo name', 'https://example.com/owner/repo', 'https://github.com/owner/repo/tree/main', 'owner/repo?token=x', 'owner/repo#readme', 'owner/..']) {
-    assert.throws(() => parseRepoSpec(input), /owner\/repo/)
+    assert.throws(() => parseRepoSpec(input), /所有者\/仓库名/)
   }
 })
 

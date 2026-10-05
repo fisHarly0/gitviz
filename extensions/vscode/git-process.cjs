@@ -2,6 +2,7 @@ const { spawn, execFile } = require('node:child_process')
 const path = require('node:path')
 
 function failure(code, message, cause) { return Object.assign(new Error(message, { cause }), { code }) }
+function startFailure(error) { return failure('GIT_START', `无法启动 Git。请在终端运行 git --version，并确认仓库目录存在。安装 Git 或修改 PATH 后，完全退出并重新打开 VS Code / DSH；VS Code 还需检查 git.path 设置。\n详细原因：${error.message}`, error) }
 
 async function terminateTree(child) {
   if (!child.pid) return
@@ -52,9 +53,9 @@ function runGitProcess(executable, args, options = {}) {
     }
     try {
       child = spawn(executable, args, { cwd, env, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] })
-    } catch (error) { reject(failure('GIT_START', `无法启动 Git：${error.message}`, error)); return }
+    } catch (error) { reject(startFailure(error)); return }
     child.on('error', error => {
-      reason = failure('GIT_START', `无法启动 Git：${error.message}`, error)
+      reason = startFailure(error)
       if (!child.pid) { closed = true; finish() }
       else stop(reason)
     })

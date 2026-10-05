@@ -17,7 +17,7 @@ export default function ExportButton({ adapter, branchName, disabled }) {
   const handleExport = async () => {
     if (busy || disabled) return
     if (typeof adapter.exportBranchAsBundle !== 'function') {
-      setError('adapter does not support export')
+      setError('当前仓库不支持导出。')
       return
     }
     setBusy(true)
@@ -87,8 +87,8 @@ Notes:
 
   return (
     <>
-      <button onClick={handleExport} disabled={busy || disabled} className="export-btn" title={`Export ${branchName} as .zip`}>
-        {busy ? 'Packing...' : `↓ Export ${branchName}`}
+      <button onClick={handleExport} disabled={busy || disabled} className="export-btn" title={`将 ${branchName} 导出为 .zip`}>
+        {busy ? '正在打包…' : `导出 ${branchName}`}
       </button>
       {error && <span className="export-error">! {error}</span>}
     </>

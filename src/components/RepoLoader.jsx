@@ -16,6 +16,21 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
   const [repoSpec, setRepoSpec] = useState('fisHarly0/gitviz')
   const [pat, setPat] = useState(loadPAT)
 
+  async function loadLocal(path) {
+    setPickedPath(path)
+    const info = await openRepo(path)
+    onLoaded(createTauriAdapter({ repo: info.path, confirm, run }))
+  }
+
+  async function handleLocalLoad(event) {
+    event.preventDefault()
+    if (busy || !desktop || !pickedPath.trim()) return
+    setError(''); setBusy(true)
+    try { await loadLocal(pickedPath.trim()) }
+    catch (err) { setError(err.message || String(err)) }
+    finally { setBusy(false) }
+  }
+
   async function handlePickFolder() {
     if (busy || !desktop) return
     setError('')
@@ -24,15 +39,12 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
       const path = await openDialog({
         directory: true,
         multiple: false,
-        title: 'Pick repo folder (containing .git)',
+        title: '选择 Git 仓库的工作目录',
       })
       if (!path) {
         return
       }
-      setPickedPath(path)
-      const info = await openRepo(path)
-      const adapter = createTauriAdapter({ repo: info.path, confirm, run })
-      onLoaded(adapter)
+      await loadLocal(path)
     } catch (err) {
       setError(err.message || String(err))
     } finally {
@@ -55,18 +67,18 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
       })
       const branches = await adapter.listBranches()
       if (branches.length === 0) {
-        throw new Error('This repository has no branches yet. Push a commit to GitHub, then try again.')
+        throw new Error('这个仓库还没有分支。先向 GitHub 推送一次提交，再重新打开。')
       }
       savePAT(token)
       onLoaded(adapter)
     } catch (err) {
       const messages = {
-        401: 'GitHub rejected this token. Update it, or clear it to browse a public repository.',
-        403: 'GitHub denied access or the API limit was reached. Check token permissions or try again later.',
-        404: 'Repository not found or not accessible. Check owner/repo and token access for private repositories.',
-        429: 'GitHub API limit reached. Wait a moment and try again.',
+        401: 'GitHub 未接受这个令牌。请更新令牌；公开仓库也可以清空令牌后重试。',
+        403: 'GitHub 拒绝访问或请求额度已用完。请检查令牌权限，或稍后重试。',
+        404: '仓库不存在或没有访问权限。请检查所有者/仓库名；私有仓库需要有读取权限的令牌。',
+        429: 'GitHub 请求过于频繁。请稍后重试。',
       }
-      setError(messages[err.status] || err.message || 'Could not connect to GitHub. Check your connection and try again.')
+      setError(messages[err.status] || err.message || '无法连接 GitHub。请检查网络后重试。')
     } finally {
       setBusy(false)
     }
@@ -79,10 +91,10 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
           className={mode === 'local' ? 'tab active' : 'tab'}
           disabled={busy || !desktop}
           aria-pressed={mode === 'local'}
-          title={desktop ? 'Open a local repository' : 'Local repositories require the desktop app'}
+          title={desktop ? '打开本地 Git 仓库' : '本地仓库需要使用桌面应用'}
           onClick={() => setMode('local')}
         >
-          Local repo
+          本地仓库
         </button>
         <button
           className={mode === 'github' ? 'tab active' : 'tab'}
@@ -96,32 +108,25 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
 
       {!desktop && (
         <p className="hint runtime-hint">
-          Browser mode: browse GitHub repositories read-only. To open local folders,
-          start the desktop app with <code>npm run desktop:dev</code>.
+          网页模式只读浏览 GitHub 仓库。要打开本地文件夹，请使用 Gitviz 桌面应用。
         </p>
       )}
 
       {mode === 'local' && (
-        <div className="mode-body">
+        <form className="mode-body" onSubmit={handleLocalLoad}>
           <p className="hint">
-            Pick the folder that contains <code>.git</code> (your repo root).
-            Reads directly from disk through the Tauri backend - no upload, no sandbox copy.
+            打开包含 <code>.git</code> 的工作目录，也支持 Git worktree。直接读取本机文件，不上传仓库。
           </p>
-          <button onClick={handlePickFolder} disabled={busy}>
-            {busy ? 'Opening...' : 'Choose folder'}
-          </button>
-          {pickedPath && !busy && (
-            <div className="progress-current" style={{ marginTop: 6, opacity: 0.7 }}>
-              {pickedPath}
-            </div>
-          )}
-        </div>
+          <label>本机仓库路径<input value={pickedPath} onChange={event => setPickedPath(event.target.value)} placeholder="粘贴仓库的完整路径" disabled={busy} autoCapitalize="none" spellCheck={false}/></label>
+          <div className="repo-open-actions"><button type="submit" disabled={busy || !pickedPath.trim()}>{busy ? '正在打开…' : '打开仓库'}</button><button type="button" onClick={handlePickFolder} disabled={busy}>选择文件夹</button></div>
+          <p className="hint">需要已安装 Git。点击节点只预览；切换、恢复或编辑会另行说明影响并请你确认。</p>
+        </form>
       )}
 
       {mode === 'github' && (
         <form className="mode-body" onSubmit={handleGithubLoad}>
           <label>
-            Repo (owner/repo or URL)
+            GitHub 仓库（所有者/仓库名或网址）
             <input
               value={repoSpec}
               onChange={(e) => setRepoSpec(e.target.value)}
@@ -133,7 +138,7 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
             />
           </label>
           <label>
-            Personal access token (optional, session only)
+            访问令牌（可选，仅当前标签页）
             <input
               type="password"
               value={pat}
@@ -144,12 +149,11 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
               spellCheck={false}
             />
             <small>
-              Kept for this tab only when session storage is available. Public repositories
-              work without a token; use read-only access for private repositories.
+              公开仓库通常无需令牌；私有仓库请使用只读权限。浏览器允许会话存储时，令牌仅在当前标签页保留。
             </small>
           </label>
           <button type="submit" disabled={busy || !repoSpec.trim()}>
-            {busy ? 'Loading repository...' : 'Load repository'}
+            {busy ? '正在读取仓库…' : '只读打开 GitHub 仓库'}
           </button>
         </form>
       )}

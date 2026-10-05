@@ -99,13 +99,14 @@ export default function EditorPanel({
     <div className="editor-panel">
       <header className="editor-header">
         <div className="editor-meta">
-          <span className="if-badge">{ifBranchName || 'if-line'}</span>
+          <span className="if-badge">{ifBranchName || '试验分支'}</span>
           <code className="filepath">{filepath}</code>
         </div>
         <div className="editor-actions">
           <input
             type="text"
-            placeholder={`commit msg (defaults to "edit ${filepath}")`}
+            aria-label="提交说明"
+            placeholder={`提交说明（留空使用 gitviz: edit ${filepath}）`}
             value={commitMsg}
             onChange={(e) => { reportDraft({ message: e.target.value }); setCommitMsg(e.target.value) }}
             className="commit-msg-input"
@@ -117,18 +118,18 @@ export default function EditorPanel({
             disabled={busy}
             className="save-btn"
           >
-            {busy ? 'Committing...' : 'Save & Commit'}
+            {busy ? '正在提交…' : '保存并提交'}
           </button>
           <button onClick={async () => { if ((content === (initialContent ?? '') && !commitMsg) || await confirm?.()) onCancel() }} disabled={busy} className="cancel-btn">
-            Cancel
+            取消编辑
           </button>
         </div>
       </header>
 
-      {error && <div className="error editor-error">! {error}</div>}
+      {error && <div className="error editor-error" role="alert">{error}</div>}
 
       <div className="editor-body">
-        <Suspense fallback={<div className="loading">Loading editor (Monaco ~2MB)...</div>}>
+        <Suspense fallback={<div className="loading" role="status">正在加载编辑器…</div>}>
           <Editor
             height="100%"
             language={detectLanguage(filepath)}

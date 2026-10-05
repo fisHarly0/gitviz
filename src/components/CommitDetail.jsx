@@ -15,7 +15,7 @@ function StatusBadge({ status }) {
       className="status-badge"
       style={{ background: colors[status] || '#666' }}
     >
-      {status}
+      {{ add: '新增', modify: '修改', remove: '删除', rename: '重命名' }[status] || status}
     </span>
   )
 }
@@ -50,7 +50,7 @@ function CommitDetailSkeleton() {
 }
 
 function PatchView({ patch }) {
-  if (!patch) return <div className="muted">No patch available.</div>
+  if (!patch) return <div className="muted">没有可显示的文本差异。</div>
   return (
     <pre className="patch">
       {patch.split('\n').map((line, i) => {
@@ -103,7 +103,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
   }, [adapter, oid])
 
   if (!oid) {
-    return <div className="placeholder">Pick a commit on the left.</div>
+    return <div className="placeholder">选择地图中的存档，查看提交说明和文件变化。</div>
   }
   if (loading) return <CommitDetailSkeleton />
   if (error) return <div className="error">{error}</div>
@@ -144,7 +144,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
 
   const handleSaveCommit = async (newContent, commitMsg) => {
     const filepath = session.editingFile
-    if (!filepath) throw new Error('no editing file')
+    if (!filepath) throw new Error('尚未选择要编辑的文件。')
     const result = await adapter.saveEdit(filepath, newContent, commitMsg, { head: session.headOid, branch: session.currentBranch })
     if (result.cancelled) return { cancelled: true }
     session.onCommitInIf(result.head)
@@ -188,17 +188,17 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
       <div className="files-and-diff">
         <ul className="file-list">
           {files.length === 0 && (
-            <li className="muted">No file changes (merge or empty).</li>
+            <li className="muted">没有文件变化，可能是合并或空提交。</li>
           )}
           {files.map((f) => (
             <li
               key={f.path}
               className={f.path === activeFile ? 'active' : ''}
             >
-              <span className="file-row-main" onClick={() => setActiveFile(f.path)}>
+              <button type="button" className="file-row-main" onClick={() => setActiveFile(f.path)} aria-pressed={f.path === activeFile}>
                 <StatusBadge status={f.status} />
                 <span className="path">{f.path}</span>
-              </span>
+              </button>
               {canEdit && f.status !== 'remove' && (
                 <button
                   className="edit-file-btn"
@@ -206,11 +206,11 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
                   onClick={() => handleEdit(f.path)}
                   title={
                     session.mode === 'preview'
-                      ? 'Edit this file (will fork into a new if-line)'
-                      : 'Edit this file on current if-line'
+                      ? '编辑前将确认创建并切换到新的试验分支'
+                      : '在当前试验分支编辑这个文件'
                   }
                 >
-                  Edit
+                  编辑文件
                 </button>
               )}
             </li>
@@ -227,7 +227,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
             />
           )}
           {file && !useSideBySide && <PatchView patch={file.patch} />}
-          {!file && <div className="muted">Select a file.</div>}
+          {!file && <div className="muted">选择文件以查看差异。</div>}
         </div>
       </div>
     </div>
@@ -259,7 +259,7 @@ function EditEnter({ adapter, filepath, ifBranchName, sourceOid, onSave, onCance
   }, [adapter, filepath, sourceOid])
 
   if (error) return <div className="error">{error}</div>
-  if (initial === null) return <div className="loading">Loading {filepath}...</div>
+  if (initial === null) return <div className="loading" role="status">正在读取 {filepath}…</div>
 
   return (
     <EditorPanel
