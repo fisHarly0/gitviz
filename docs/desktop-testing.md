@@ -19,6 +19,7 @@ New-Item -ItemType Directory -Force -Path $env:GITVIZ_DESKTOP_TEST_ROOT | Out-Nu
 $testApp=Start-Process -FilePath '.\src-tauri\target\release\gitviz.exe' -WindowStyle Hidden -PassThru
 node tests/desktop-actions-smoke.cjs
 node tests/desktop-editor-smoke.cjs
+node tests/desktop-recovery-smoke.cjs
 Stop-Process -Id $testApp.Id
 ```
 
@@ -28,6 +29,7 @@ Stop-Process -Id $testApp.Id
 
 - `desktop-actions-smoke.cjs`：创建分支不切换、取消不写入、过期确认拒绝与刷新重试、恢复新提交与备份、dirty 原目录与独立 worktree、打开关联工作区、打开失败保留当前仓库、游离 HEAD、失败 hook 保留内容、小窗口表单与确认框。
 - `desktop-editor-smoke.cjs`：fork 真正同步文件、未保存导航保护、外部 HEAD 变化时拒绝保存并保留编辑缓冲、取消与重新开始、真实提交身份/index、切回主线同步文件。
+- `desktop-recovery-smoke.cjs`：恢复 hook 失败、操作记录与备份、取消不改 index/次数、确认后外部修改拒绝、继续提交的 tree/parent/身份、重开仓库记录持久、编辑缓冲保留和编辑中禁止续交、960×600 确认框。
 - 不模拟 Tauri invoke，也不替换 Git 后端。打开仓库使用合成拖放事件；文件夹选择框尚未自动化验证。
 - 小窗口通过 WebView 视口模拟；没有覆盖物理多设备、跨平台、离线 Monaco 或操作系统强制关闭。
 - 这是开发验收入口，尚未接入 CI，不能据此宣称已完成正式发行安装与升级验收。

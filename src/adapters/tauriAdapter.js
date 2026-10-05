@@ -23,6 +23,7 @@ export function createTauriAdapter({ repo, confirm, run } = {}) {
         if (method === 'snapshot') return await invoke('history_snapshot', { limit: 300 })
         if (method === 'historyPage') return await invoke('history_page', { params })
         if (method === 'searchHistory') return await invoke('history_search', { params })
+        if (method === 'operations') return await invoke('desktop_operations', { before: params.before || null, limit: 30 })
         throw new Error('不支持的历史请求。')
       } catch (reason) {
         throw reason instanceof Error ? reason : new Error(String(reason))

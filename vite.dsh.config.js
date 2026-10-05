@@ -22,7 +22,7 @@ export default defineConfig({
         chunk.code = `window.__ModuleLoader__.load({id:'@fisharly/gitviz-dsh',factory(require){var module={exports:{}};var exports=module.exports;\n${chunk.code}\nreturn module.exports;}});`
       }
     },
-    closeBundle() { fs.copyFileSync('extensions/vscode/git-service.cjs', 'extensions/dsh/dist/git-service.cjs') },
+    closeBundle() { for (const file of ['git-service.cjs', 'operation-journal.cjs']) fs.copyFileSync(`extensions/vscode/${file}`, `extensions/dsh/dist/${file}`) },
   }],
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },
   build: {

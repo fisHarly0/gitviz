@@ -76,6 +76,7 @@ function activate(context) {
     const repo = service
     if (method === 'historyPage') return repo.historyPage(params)
     if (method === 'searchHistory') return repo.searchHistory(params)
+    if (method === 'operations') return repo.operations(params)
     if (method === 'detail') return repo.detail(params.oid)
     if (method === 'compare') return { from: params.from, to: params.to, files: await repo.files(params.from, params.to) }
     if (method === 'openDiff') return nativeDiff(repo, params)
@@ -83,6 +84,15 @@ function activate(context) {
       if (!allowedWorktrees.has(params.path)) throw new Error('只能打开本次创建的试验工作区。')
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(params.path), { forceNewWindow: true })
       return {}
+    }
+    if (method === 'resumeCommit') {
+      ensureSavedEditors(repo)
+      const record = await repo.pendingCommit(params.id, params.expected)
+      const files = (await repo.command(['diff', '--cached', '--name-only', '-z', '--'])).split('\0').filter(Boolean)
+      const okay = await vscode.window.showWarningMessage('继续失败的提交？', { modal: true, detail: `仓库：${repo.root}\n操作：${record.id}\n将提交 ${files.length} 个文件，仅接受失败时的检查点，不自动暂存新的改动。Git 身份、签名和钩子继续生效。\n\n${files.slice(0, 8).join('\n')}` }, '检查并继续提交')
+      if (!okay) return { cancelled: true }
+      ensureSavedEditors(repo)
+      return { ...await repo.resumeCommit(params.id, params.expected, record.checkpoint), snapshot: await getSnapshot() }
     }
     if (!['createBranch', 'switchBranch', 'createWorktree', 'restore'].includes(method)) throw new Error('不支持的请求。')
     if (['switchBranch', 'restore'].includes(method)) ensureSavedEditors(repo)
@@ -127,10 +137,10 @@ function activate(context) {
     current.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${current.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${current.webview.cspSource}; img-src ${current.webview.cspSource} data:;"><link rel="stylesheet" href="${style}"><title>Gitviz 版本树</title></head><body><div id="root"></div><script nonce="${nonce}" src="${script}"></script></body></html>`
     current.webview.onDidReceiveMessage(async message => {
       if (!message || typeof message.id !== 'string' || message.id.length > 100 || typeof message.method !== 'string') return
-      if (requestBusy && !['snapshot', 'detail', 'compare', 'openDiff', 'historyPage', 'searchHistory'].includes(message.method)) {
+      if (requestBusy && !['snapshot', 'detail', 'compare', 'openDiff', 'historyPage', 'searchHistory', 'operations'].includes(message.method)) {
         await current.webview.postMessage({ id: message.id, error: '另一个操作正在进行。' }); return
       }
-      const mutation = !['snapshot', 'detail', 'compare', 'openDiff', 'historyPage', 'searchHistory'].includes(message.method)
+      const mutation = !['snapshot', 'detail', 'compare', 'openDiff', 'historyPage', 'searchHistory', 'operations'].includes(message.method)
       if (mutation) requestBusy = true
       try { await current.webview.postMessage({ id: message.id, result: await handle(message.method, message.params) }) }
       catch (error) { await current.webview.postMessage({ id: message.id, error: error.message }) }

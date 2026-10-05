@@ -3,6 +3,7 @@ import TreeMap from './TreeMap.jsx'
 import Icon from './Icons.jsx'
 import useHistoryPaging from './useHistoryPaging.js'
 import HistoryControls from './HistoryControls.jsx'
+import OperationHistory from './OperationHistory.jsx'
 
 const short = oid => oid?.slice(0, 7) || '—'
 const statusLabels = { A: '新增', M: '修改', D: '删除', R: '重命名', C: '复制', T: '类型变化' }
@@ -15,6 +16,7 @@ export default function VersionTree({ bridge, hostName = 'VS Code', busyHint = '
   const [query, setQuery] = useState(''), [focusOid, setFocusOid] = useState(null)
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false)
   const [worktree, setWorktree] = useState(null)
+  const [operationRevision, setOperationRevision] = useState(0)
   const sequence = useRef(0)
 
   useEffect(() => {
@@ -66,15 +68,17 @@ export default function VersionTree({ bridge, hostName = 'VS Code', busyHint = '
       const result = method === 'snapshot' ? await refresh() : await bridge.request(method, { ...params, expected: { head: snapshot?.head, branch: snapshot?.branch } })
       if (id !== sequence.current) return
       if (result.snapshot) setSnapshot(result.snapshot)
-      if (result.head) { setSelected(result.head); setComparing(false); setCompareOids([]) }
+      if (result.head && ['restore', 'resumeCommit', 'switchBranch'].includes(method)) { setSelected(result.head); setComparing(false); setCompareOids([]) }
       if (method === 'switchBranch' && result.snapshot) setSelected(result.snapshot.head)
       if (method === 'chooseRepo') { setSnapshot(result); setSelected(defaultSelection(result)); setCompareOids([]); setComparing(false); setFocusOid(null); setDetail(null); setComparison(null); setWorktree(null) }
       if (result.worktree) setWorktree(result.worktree)
       if (result.message) setNotice(result.message)
+      return result
     } catch (reason) {
       setError(reason.message)
-      if (['restore', 'switchBranch', 'createBranch', 'createWorktree'].includes(method)) await refresh().catch(() => {})
-    } finally { setBusy(false) }
+      if (['restore', 'switchBranch', 'createBranch', 'createWorktree', 'resumeCommit'].includes(method)) await refresh().catch(() => {})
+      return { error: reason.message }
+    } finally { setBusy(false); setOperationRevision(value => value + 1) }
   }
   const resetCompare = () => { setComparing(false); setCompareOids([]) }
   const viewing = detail?.oid === selected ? detail : null
@@ -98,6 +102,7 @@ export default function VersionTree({ bridge, hostName = 'VS Code', busyHint = '
         <aside className="node-inspector" aria-label="存档详情"><div className="inspector-heading"><h2>{comparing ? '存档比较' : selected === snapshot.head ? '当前存档' : '存档预览'}</h2><span className="read-only-note">只读查看</span></div>
           {comparing ? <div className="commit-summary"><h3>{compareOids.length === 2 ? `${short(compareOids[0])} → ${short(compareOids[1])}` : '选择另一个存档点'}</h3><p>比较只读取历史，不会切换工作文件。</p></div> : <div className="commit-summary"><div className="commit-id"><Icon name={selectedCommit?.parents.length > 1 ? 'fork' : 'clock'} size={16}/><code>{short(selected)}</code>{selectedCommit?.parents.length > 1 && <span>合并存档</span>}</div><h3>{selectedCommit?.message || '选择一个存档点'}</h3><p>{viewing?.author || selectedCommit?.author}<span className="commit-date">{selectedCommit && new Date(selectedCommit.timestamp * 1000).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></p>{viewing?.message.includes('\n') && <pre className="commit-body">{viewing.message.slice(viewing.message.indexOf('\n') + 1).trim()}</pre>}{viewing?.parents.length > 1 && <p className="merge-note">合并了 {viewing.parents.length} 条历史。下方变更相对第一个父存档；可选择其他父节点进行比较。</p>}</div>}
           {!comparing && <div className="node-actions"><button className="primary" disabled={writeBlocked} onClick={() => act('createWorktree', { oid: selected })}><Icon name="fork"/>从这里试一版</button><p>新建独立工作目录，保留当前进度。</p><div className="secondary-actions"><button disabled={writeBlocked} onClick={() => act('createBranch', { oid: selected })}><Icon name="plus" size={15}/>建分支</button><button disabled={writeBlocked || snapshot.dirty || !snapshot.branch || selected === snapshot.head} title={snapshot.dirty ? '先处理未提交修改' : '保留历史，恢复为新提交'} onClick={() => act('restore', { oid: selected })}><Icon name="back" size={15}/>恢复此存档</button></div>{localRefs.map(ref => <button className="switch-ref quiet" disabled={writeBlocked || snapshot.dirty} key={ref.name} onClick={() => act('switchBranch', { name: ref.name })}>切换到 {ref.name}<Icon name="arrow" size={14}/></button>)}{snapshot.dirty && <p className="dirty-hint">未提交修改会保留；切换和恢复暂不可用。</p>}{worktree && <button className="quiet" disabled={busy} onClick={() => act('openWorktree', { path: worktree })}><Icon name="folder" size={15}/>打开刚创建的试验工作区</button>}</div>}
+          <OperationHistory key={`operations-${snapshot.repo}`} load={params => bridge.request('operations', params)} onResume={record => act('resumeCommit', { id: record.id })} refreshKey={operationRevision} blocked={busy || !snapshot.writable}/>
           <div className="changes-heading"><h3>文件变化</h3><span>{changes?.files.length ?? '—'}</span></div><div className="file-changes">{!changes ? <p className="quiet-text">{comparing && compareOids.length < 2 ? '选好两个节点后，差异会显示在这里。' : '正在读取文件变化…'}</p> : changes.files.length === 0 ? <div className="no-changes"><Icon name="check"/><p>文件内容相同</p></div> : changes.files.map(file => <button key={file.path} className="file-change" disabled={busy} title={`${file.status === 'R' ? `${file.oldPath} → ` : ''}${file.path} · 在编辑器中比较`} onClick={() => act('openDiff', { from: changes.from, to: changes.to, path: file.path })}><span className={`file-status status-${file.status}`}>{file.status}</span><span className="file-name">{file.path}<small>{statusLabels[file.status] || file.status}</small></span><Icon name="arrow" size={14}/></button>)}</div><p className="diff-tip">点文件，在 {hostName} 中查看前后差异。</p>
         </aside></main>
     </>}

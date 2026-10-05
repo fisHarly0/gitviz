@@ -3,6 +3,7 @@ pub mod export;
 pub mod repo;
 pub mod history;
 pub mod operations;
+pub mod journal;
 
 use crate::SharedRepoState;
 use std::path::PathBuf;

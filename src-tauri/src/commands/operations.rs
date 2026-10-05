@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, fs, io::{Read, Write}, path::{Component, Path, PathBuf}, process::{Command, Stdio}, sync::{Arc, Mutex}, time::{Duration, Instant}};
 use tauri::State;
+use super::journal;
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Expected { pub repo: String, pub head: String, pub branch: String }
@@ -18,14 +19,15 @@ pub enum Action {
     SaveEdit { path: String, content: String, message: String },
     Restore { oid: String },
     CreateWorktree { name: String, oid: String, directory: String },
+    ResumeCommit { id: String },
 }
 
-struct Plan { root: PathBuf, expected: Expected, action: Action, revision: String, created: Instant }
+struct Plan { root: PathBuf, expected: Expected, action: Action, revision: String, checkpoint: Option<Value>, created: Instant }
 #[derive(Default)]
 pub struct Operations { plans: HashMap<String, Plan> }
 pub type SharedOperations = Arc<Mutex<Operations>>;
 
-fn nonce() -> Result<String, String> {
+pub(super) fn nonce() -> Result<String, String> {
     let mut bytes = [0u8; 16]; getrandom::fill(&mut bytes).map_err(|e| e.to_string())?;
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
@@ -121,7 +123,35 @@ fn full_checkout(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn check_checkpoint(root: &Path, record: &Value, expected: &Expected) -> Result<(), String> {
+    if record["before"]["head"] != expected.head || record["before"]["branch"] != expected.branch { return Err("当前位置与失败操作的起点不同，请检查记录和 Git 状态。".into()); }
+    guard(root,expected,false)?; full_checkout(root)?; identity(root)?;
+    if expected.branch.is_empty() { return Err("游离 HEAD 不能继续提交。".into()); }
+    let tree = record["checkpoint"]["tree"].as_str().ok_or("提交检查点缺少 tree。")?;
+    let message = record["checkpoint"]["message"].as_str().ok_or("提交检查点缺少说明。")?;
+    if ![40,64].contains(&tree.len()) || !tree.bytes().all(|b|b.is_ascii_hexdigit()) || message.trim().is_empty() || message.len() > 2000 || message.contains('\0') { return Err("提交检查点无效，请手动检查 Git 状态。".into()); }
+    if git(root,&["cat-file","-t",tree])?.trim() != "tree" { return Err("提交检查点不是 Git tree。".into()); }
+    if let Some(backup) = record["backup"].as_str() {
+        branch_name(root,backup)?;
+        if git(root,&["rev-parse","--verify",&format!("refs/heads/{backup}")])?.trim() != expected.head { return Err("备份引用已变化，请先检查恢复前的位置。".into()); }
+    }
+    git(root,&["diff","--cached","--quiet","--no-ext-diff","--no-textconv",tree,"--"]).map_err(|_|"暂存区与失败时的检查点不同，请先检查差异；不会提交新增改动。".to_owned())?;
+    git(root,&["diff","--quiet","--no-ext-diff","--no-textconv","--ignore-submodules=none","--"]).map_err(|_|"工作文件在失败后发生变化，请先检查差异；不会自动暂存。".to_owned())?;
+    if !git(root,&["ls-files","--others","--exclude-standard","-z"])?.is_empty() { return Err("存在未跟踪文件，请先处理后再继续提交。".into()); }
+    Ok(())
+}
+fn pending_commit(root: &Path, id: &str, expected: &Expected) -> Result<Value, String> {
+    let record = journal::read(root,id)?;
+    if record["state"] != "failed" || !matches!(record["action"].as_str(),Some("restore" | "saveEdit")) || !record["checkpoint"].is_object() { return Err("该记录没有可继续的失败提交。".into()); }
+    check_checkpoint(root,&record,expected)?; Ok(record)
+}
+
 fn validate(root: &Path, expected: &Expected, action: &Action) -> Result<Value, String> {
+    if let Action::ResumeCommit { id } = action {
+        let record = pending_commit(root,id,expected)?;
+        let files: Vec<String> = git(root,&["diff","--cached","--name-only","-z","--"])?.split('\0').filter(|s|!s.is_empty()).map(str::to_owned).collect();
+        return Ok(json!({"title":"继续失败的提交","confirmLabel":"检查并继续提交","impact":"仅提交与失败检查点完全一致的暂存内容；不会自动暂存新的改动。Git 身份、签名和钩子继续生效。","expected":expected,"files":files,"target":record["params"]["oid"],"operationId":id,"checkpoint":record["checkpoint"]}));
+    }
     let clean = !matches!(action, Action::CreateBranch { .. } | Action::CreateWorktree { .. });
     guard(root, expected, clean)?;
     let mut target = None;
@@ -154,6 +184,7 @@ fn validate(root: &Path, expected: &Expected, action: &Action) -> Result<Value, 
             if git(root, &["rev-parse", &format!("{id}^{{tree}}")])? == git(root, &["rev-parse", "HEAD^{tree}"])? { return Err("文件内容相同，无需恢复。".into()); }
             target = Some(id.clone());
         }
+        Action::ResumeCommit { .. } => unreachable!(),
     }
     let files = if let Some(id) = &target { git(root, &["diff", "--name-only", "-z", &expected.head, id, "--"])? .split('\0').filter(|s|!s.is_empty()).map(str::to_owned).collect::<Vec<_>>() } else if let Action::SaveEdit { path, .. } = action { vec![path.clone()] } else { vec![] };
     let impact = match action {
@@ -163,6 +194,7 @@ fn validate(root: &Path, expected: &Expected, action: &Action) -> Result<Value, 
         Action::Restore { .. } => "先建立备份分支，再恢复文件并创建新提交，后续历史保留。",
         Action::CreateBranch { .. } => "增加分支引用，当前工作文件保持不变。",
         Action::CreateWorktree { .. } => "新建独立工作目录，原工作目录保持不变。",
+        Action::ResumeCommit { .. } => unreachable!(),
     };
     let (title, confirm_label) = match action {
         Action::CreateBranch { .. } => ("创建分支", "确认创建分支"),
@@ -188,8 +220,15 @@ fn lock_repo(root: &Path) -> Result<OperationLock, String> {
     write!(file, "{}", std::process::id()).map_err(|e|e.to_string())?; Ok(OperationLock(path))
 }
 
-fn execute_action(root: &Path, expected: &Expected, action: &Action) -> Result<Value, String> {
+fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint: Option<&Value>) -> Result<Value, String> {
     let _lock = lock_repo(root)?; validate(root, expected, action)?;
+    if let Action::ResumeCommit { id } = action { if Some(&journal::read(root,id)?["checkpoint"]) != checkpoint { return Err("失败检查点已变化，请重新预览。".into()); } }
+    let mut record = if let Action::ResumeCommit { id } = action {
+        let mut record = pending_commit(root,id,expected)?;
+        record["state"] = json!("running"); record["attempts"] = json!(record["attempts"].as_u64().unwrap_or(1).saturating_add(1)); record["updatedAt"] = json!(journal::now());
+        journal::save(root,&record)?; record
+    } else { journal::begin(root,expected,serde_json::to_value(action).map_err(|e|e.to_string())?)? };
+    let outcome = (|| -> Result<Value,String> {
     let mut result = json!({});
     match action {
         Action::SwitchBranch { name } => { git(root, &["switch", "--no-guess", "--no-overwrite-ignore", "--", name])?; }
@@ -198,6 +237,7 @@ fn execute_action(root: &Path, expected: &Expected, action: &Action) -> Result<V
         Action::CreateWorktree { name, oid, directory } => {
             fs::create_dir_all(directory).map_err(|e|e.to_string())?;
             let folder = Path::new(directory).join(format!("gitviz-{}-{}", &oid[..7], &nonce()?[..8]));
+            record["worktree"] = json!(folder.to_string_lossy()); journal::save(root,&record)?;
             git(root, &["worktree", "add", "-b", name, "--", &folder.to_string_lossy(), oid])?;
             result["worktree"] = json!(folder.to_string_lossy());
         }
@@ -223,28 +263,47 @@ fn execute_action(root: &Path, expected: &Expected, action: &Action) -> Result<V
             let saved = (|| -> Result<(), String> {
                 guard(root, expected, false)?;
                 git(root, &["add", "--", path])?;
+                journal::checkpoint(root,&mut record,message)?;
                 git(root, &["commit", "--only", "-m", message, "--", path])?;
+                if git(root,&["rev-parse","HEAD^{tree}"])?.trim() != record["checkpoint"]["tree"].as_str().unwrap_or("") { return Err("提交已创建，但钩子改变了结果，请检查差异。".into()); }
                 Ok(())
             })();
             if let Err(error) = saved { return Err(format!("提交未完成：{error}\n编辑内容已保留在工作文件或暂存区，未自动丢弃。请检查 Git 状态，解决身份、钩子或签名问题后继续提交。")); }
         }
         Action::Restore { oid } => {
             let backup = format!("gitviz/backup-{}", nonce()?);
+            record["backup"] = json!(backup); journal::save(root,&record)?;
             git(root, &["branch", "--", &backup, &expected.head])?;
             let restored = (|| -> Result<(), String> {
                 guard(root, expected, true)?;
                 git(root, &["restore", &format!("--source={oid}"), "--staged", "--worktree", "--", "."])?;
-                git(root, &["commit", "-m", &format!("Restore snapshot {}\n\nPrevious HEAD preserved on {backup}.", &oid[..7])])?;
+                let message = format!("Restore snapshot {}\n\nPrevious HEAD preserved on {backup}.", &oid[..7]);
+                journal::checkpoint(root,&mut record,&message)?;
+                git(root, &["commit", "-m", &message])?;
                 if git(root, &["rev-parse", "HEAD^{tree}"])? != git(root, &["rev-parse", &format!("{oid}^{{tree}}")])? { return Err("提交钩子修改了结果，请检查差异。".into()); }
                 Ok(())
             })();
             if let Err(error) = restored { return Err(format!("恢复未完成：{error}\n恢复前版本在 {backup}；已产生的文件和暂存更改保留，请检查 Git 状态。")); }
             result["backup"] = json!(backup);
         }
+        Action::ResumeCommit { .. } => {
+            check_checkpoint(root,&record,expected)?;
+            git(root,&["commit","-m",record["checkpoint"]["message"].as_str().ok_or("缺少提交说明。")?])?;
+            if git(root,&["rev-parse","HEAD^{tree}"])?.trim() != record["checkpoint"]["tree"].as_str().unwrap_or("") { return Err("提交已创建，但钩子改变了结果，请检查新提交与检查点的差异。".into()); }
+            result["backup"] = record["backup"].clone();
+        }
     }
     result["head"] = json!(head(root)?); result["branch"] = json!(branch(root));
     result["repo"] = json!(root.to_string_lossy()); result["message"] = json!("操作完成，实际 Git 状态已更新。");
     Ok(result)
+    })();
+    if let Err(error) = journal::finish(root,&mut record,&outcome) {
+        return Err(format!("{}\n操作记录更新失败：{error}。请检查实际 Git 状态。", outcome.as_ref().err().map(String::as_str).unwrap_or("Git 操作已执行。")));
+    }
+    match outcome {
+        Ok(mut result) => { result["operationId"] = record["id"].clone(); Ok(result) }
+        Err(error) => Err(format!("{error}\n操作记录：{}",record["id"].as_str().unwrap_or(""))),
+    }
 }
 
 impl Operations {
@@ -254,7 +313,8 @@ impl Operations {
         let mut preview = validate(root, &expected, &action)?;
         let revision = super::history::snapshot(root, 20)?["revision"].as_str().unwrap().to_owned();
         let token = nonce()?;
-        self.plans.insert(token.clone(), Plan { root: canonical(root)?, expected, action, revision, created: Instant::now() });
+        let checkpoint = if matches!(action,Action::ResumeCommit { .. }) {Some(preview["checkpoint"].clone())} else {None};
+        self.plans.insert(token.clone(), Plan { root: canonical(root)?, expected, action, revision, checkpoint, created: Instant::now() });
         preview["token"] = json!(token); Ok(preview)
     }
     pub fn execute(&mut self, root: &Path, token: &str) -> Result<Value, String> {
@@ -262,7 +322,7 @@ impl Operations {
         if plan.created.elapsed() >= Duration::from_secs(300) { return Err("确认已过期，请重新预览。".into()); }
         if canonical(root)? != plan.root { return Err("仓库已变化，不能执行旧操作。".into()); }
         if super::history::snapshot(root, 20)?["revision"] != plan.revision { return Err("历史已变化，请重新预览操作。".into()); }
-        execute_action(root, &plan.expected, &plan.action)
+        execute_action(root, &plan.expected, &plan.action, plan.checkpoint.as_ref())
     }
 }
 
@@ -289,6 +349,12 @@ pub async fn desktop_execute(state: State<'_, SharedRepoState>, operations: Stat
 pub fn desktop_cancel(operations: State<'_, SharedOperations>, token: String) -> Result<(), String> {
     operations.try_lock().map_err(|_|"另一个操作正在进行。".to_owned())?.plans.remove(&token);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn desktop_operations(state: State<'_, SharedRepoState>, before: Option<String>, limit: Option<usize>) -> Result<Value,String> {
+    let root = super::current_repo_path(&state)?;
+    tauri::async_runtime::spawn_blocking(move || journal::list(&root,before.as_deref(),limit.unwrap_or(30))).await.map_err(|e|e.to_string())?
 }
 
 #[cfg(test)]
@@ -402,5 +468,60 @@ mod tests {
         let error = f.perform(f.save("keep my edit\n")).unwrap_err(); assert!(error.contains("fixture-hook-rejected")); assert!(error.contains("保留"));
         assert_eq!(head(&f.root).unwrap(), f.latest); assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "keep my edit\n");
         assert_eq!(git(&f.root, &["show", ":中文.txt"]).unwrap(), "keep my edit\n");
+    }
+    fn failing_hook(f: &Fixture) -> PathBuf {
+        let hook = f.root.join(".git/hooks/pre-commit"); fs::write(&hook,"#!/bin/sh\necho fixture-hook-rejected >&2\nexit 1\n").unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&hook,fs::Permissions::from_mode(0o755)).unwrap(); }
+        hook
+    }
+    fn node_fixture(mode: &str, f: &Fixture, value: &str) -> String {
+        let helper = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("tests/helpers/recovery-interop.cjs");
+        let mut command = Command::new("node"); command.arg(helper).args([mode,f.root.to_str().unwrap(),value]).current_dir(&f.root);
+        #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
+        let output = command.output().expect("Node is required for the cross-host recovery contract tests");
+        assert!(output.status.success(),"{}",String::from_utf8_lossy(&output.stderr)); String::from_utf8(output.stdout).unwrap().trim().into()
+    }
+    #[test]
+    fn node_can_resume_rust_edit_record_without_storing_editor_text() {
+        let f = Fixture::new(); let hook = failing_hook(&f);
+        assert!(f.perform(f.save("keep this editor text\n")).is_err());
+        let record = journal::list(&f.root,None,30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"],"failed"); assert!(record["params"]["content"].is_null());
+        assert!(!serde_json::to_string(&record).unwrap().contains("keep this editor text"));
+        let id = record["id"].as_str().unwrap();
+        fs::remove_file(hook).unwrap();
+        let result: Value = serde_json::from_str(&node_fixture("resume",&f,id)).unwrap();
+        assert_eq!(result["operationId"],id);
+        assert_eq!(git(&f.root,&["rev-parse","HEAD^"]).unwrap().trim(),f.latest);
+        assert_eq!(git(&f.root,&["show","HEAD:中文.txt"]).unwrap(),"keep this editor text\n");
+        assert_eq!(journal::read(&f.root,id).unwrap()["state"],"completed");
+        assert!(f.perform(Action::ResumeCommit {id:id.into()}).unwrap_err().contains("没有可继续"));
+    }
+    #[test]
+    fn rust_can_resume_node_restore_but_rejects_changed_files_index_head_and_preview() {
+        let f = Fixture::new(); let hook = failing_hook(&f);
+        let id = node_fixture("fail",&f,&f.first); let record = journal::read(&f.root,&id).unwrap();
+        let action = || Action::ResumeCommit {id:id.clone()};
+        let mut ops = Operations::default();
+        let index = fs::read(f.root.join(".git/index")).unwrap();
+        let preview = ops.prepare(&f.root,f.expected(),action()).unwrap();
+        assert_eq!(fs::read(f.root.join(".git/index")).unwrap(),index); assert_eq!(journal::read(&f.root,&id).unwrap()["attempts"],1);
+        fs::write(f.root.join("中文.txt"),"external edit\n").unwrap();
+        assert!(ops.execute(&f.root,preview["token"].as_str().unwrap()).unwrap_err().contains("工作文件"));
+        git(&f.root,&["add","--","中文.txt"]).unwrap();
+        assert!(f.perform(action()).unwrap_err().contains("暂存区"));
+        git(&f.root,&["restore",&format!("--source={}",f.first),"--staged","--worktree","--","."]).unwrap();
+        fs::write(f.root.join("untracked.txt"),"keep").unwrap(); assert!(f.perform(action()).unwrap_err().contains("未跟踪")); fs::remove_file(f.root.join("untracked.txt")).unwrap();
+        git(&f.root,&["update-ref","refs/heads/main",&f.first]).unwrap(); assert!(f.perform(action()).unwrap_err().contains("起点不同"));
+        git(&f.root,&["update-ref","refs/heads/main",&f.latest]).unwrap();
+        let preview = ops.prepare(&f.root,f.expected(),action()).unwrap();
+        let mut changed = record.clone(); changed["checkpoint"]["message"] = json!("different confirmed message"); journal::save(&f.root,&changed).unwrap();
+        assert!(ops.execute(&f.root,preview["token"].as_str().unwrap()).unwrap_err().contains("检查点已变化"));
+        journal::save(&f.root,&record).unwrap(); fs::remove_file(hook).unwrap();
+        let result = f.perform(action()).unwrap(); assert_eq!(result["operationId"],id);
+        assert_eq!(git(&f.root,&["rev-parse","HEAD^"]).unwrap().trim(),f.latest);
+        assert_eq!(git(&f.root,&["rev-parse","HEAD^{tree}"]).unwrap().trim(),record["checkpoint"]["tree"].as_str().unwrap());
+        assert_eq!(git(&f.root,&["rev-parse",record["backup"].as_str().unwrap()]).unwrap().trim(),f.latest);
+        let listed: Value = serde_json::from_str(&node_fixture("list",&f,"")).unwrap(); assert_eq!(listed["records"][0]["state"],"completed");
     }
 }

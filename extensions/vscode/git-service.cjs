@@ -3,11 +3,12 @@ const { promisify } = require('node:util')
 const fs = require('node:fs/promises')
 const path = require('node:path')
 const { randomUUID, createHash } = require('node:crypto')
+const { OperationJournal } = require('./operation-journal.cjs')
 const run = promisify(execFile)
 const OID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/
 
 class GitService {
-  constructor(root, git = 'git') { this.root = root; this.git = git; this.busy = false }
+  constructor(root, git = 'git') { this.root = root; this.git = git; this.busy = false; this.journal = new OperationJournal(this) }
 
   async command(args, options = {}) {
     try {
@@ -183,7 +184,68 @@ class GitService {
   async exclusive(action) {
     if (this.busy) throw new Error('另一个 Git 操作正在进行，请稍后重试。')
     this.busy = true
-    try { return await action() } finally { this.busy = false }
+    let lock, file
+    try {
+      file = path.resolve(this.root, (await this.command(['rev-parse', '--git-path', 'gitviz-operation.lock'])).trim())
+      lock = await fs.open(file, 'wx').catch(error => { if (error.code === 'EEXIST') throw new Error('另一个 Gitviz 写操作正在进行；若上次异常退出，请先检查 Git 状态与操作记录。'); throw error })
+      await lock.writeFile(String(process.pid))
+      return await action()
+    } finally { try { if (lock) { await lock.close(); await fs.unlink(file) } } finally { this.busy = false } }
+  }
+
+  async operations(params) { return this.journal.list(params) }
+
+  async recorded(action, params, expected, runAction, previous) {
+    const record = previous || await this.journal.begin(action, params, expected)
+    if (previous) { record.state = 'running'; record.attempts += 1; record.updatedAt = Date.now(); await this.journal.save(record) }
+    let result
+    try { result = await runAction(record) }
+    catch (error) {
+      let recordError = ''
+      try { await this.journal.finish(record, {}, error) } catch (failure) { recordError = `\n记录更新失败：${failure.message}` }
+      throw new Error(`${error.message}\n操作记录：${record.id}${recordError}`, { cause: error })
+    }
+    try { await this.journal.finish(record, result) }
+    catch (error) { throw new Error(`Git 操作已执行，但记录更新失败：${error.message}。请刷新检查实际状态。`, { cause: error }) }
+    return { ...result, head: record.result.head, branch: record.result.branch, operationId: record.id }
+  }
+
+  async pendingCommit(id, expected) {
+    const record = await this.journal.read(id)
+    if (record.state !== 'failed' || !['restore', 'saveEdit'].includes(record.action) || !record.checkpoint) throw new Error('该记录没有可继续的失败提交。')
+    await this.checkCheckpoint(record, expected)
+    return record
+  }
+
+  async checkCheckpoint(record, expected) {
+    if (record.before?.head !== expected?.head || record.before?.branch !== expected?.branch) throw new Error('当前位置与失败操作的起点不同，请检查记录和 Git 状态。')
+    await this.guard(expected, false)
+    if (!expected.branch) throw new Error('游离 HEAD 不能继续提交。')
+    const { tree, message } = record.checkpoint
+    if (!OID.test(tree || '') || typeof message !== 'string' || !message.trim() || Buffer.byteLength(message) > 2000 || message.includes('\0')) throw new Error('提交检查点无效，请手动检查 Git 状态。')
+    if ((await this.command(['cat-file', '-t', tree])).trim() !== 'tree') throw new Error('提交检查点不是 Git tree。')
+    if (record.backup) {
+      await this.validateBranch(record.backup)
+      if ((await this.command(['rev-parse', '--verify', `refs/heads/${record.backup}`])).trim() !== expected.head) throw new Error('备份引用已变化，请先检查恢复前的位置。')
+    }
+    if ((await this.command(['config', '--bool', 'core.sparseCheckout']).catch(() => '')).trim() === 'true') throw new Error('稀疏检出仓库暂不支持继续提交。')
+    await this.command(['diff', '--cached', '--quiet', '--no-ext-diff', '--no-textconv', tree, '--']).catch(() => { throw new Error('暂存区与失败时的检查点不同，请先检查差异；不会提交新增改动。') })
+    await this.command(['diff', '--quiet', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '--']).catch(() => { throw new Error('工作文件在失败后发生变化，请先检查差异；不会自动暂存。') })
+    if (await this.command(['ls-files', '--others', '--exclude-standard', '-z'])) throw new Error('存在未跟踪文件，请先处理后再继续提交。')
+    await this.command(['var', 'GIT_AUTHOR_IDENT']); await this.command(['var', 'GIT_COMMITTER_IDENT'])
+  }
+
+  async resumeCommit(id, expected, checkpoint) {
+    return this.exclusive(async () => {
+      const record = await this.pendingCommit(id, expected)
+      if (checkpoint && (record.checkpoint.tree !== checkpoint.tree || record.checkpoint.message !== checkpoint.message)) throw new Error('失败检查点已变化，请重新预览。')
+      return this.recorded(record.action, record.params, expected, async () => {
+        await this.checkCheckpoint(record, expected)
+        await this.command(['commit', '-m', record.checkpoint.message], { timeout: 120000 })
+        if ((await this.command(['rev-parse', 'HEAD^{tree}'])).trim() !== record.checkpoint.tree) throw new Error('提交已创建，但钩子改变了结果，请检查新提交与检查点的差异。')
+        return { message: '失败操作已继续提交，原备份保留。', backup: record.backup }
+      }, record)
+    })
   }
 
   async validateBranch(name) {
@@ -196,8 +258,10 @@ class GitService {
   async createBranch(oid, name, expected) {
     return this.exclusive(async () => {
       await this.assertOid(oid); await this.validateBranch(name); await this.guard(expected, false)
-      await this.command(['branch', '--', name, oid])
-      return { message: `已创建分支 ${name}；当前工作区保持不变。` }
+      return this.recorded('createBranch', { oid, name }, expected, async () => {
+        await this.command(['branch', '--', name, oid])
+        return { message: `已创建分支 ${name}；当前工作区保持不变。` }
+      })
     })
   }
 
@@ -205,8 +269,10 @@ class GitService {
     return this.exclusive(async () => {
       await this.validateBranch(name); await this.guard(expected)
       await this.command(['show-ref', '--verify', `refs/heads/${name}`])
-      await this.command(['switch', '--no-guess', '--no-overwrite-ignore', '--', name])
-      return { message: `已切换到 ${name}，工作文件已同步。` }
+      return this.recorded('switchBranch', { name }, expected, async () => {
+        await this.command(['switch', '--no-guess', '--no-overwrite-ignore', '--', name])
+        return { message: `已切换到 ${name}，工作文件已同步。` }
+      })
     })
   }
 
@@ -214,10 +280,13 @@ class GitService {
     return this.exclusive(async () => {
       await this.assertOid(oid); await this.validateBranch(name); await this.guard(expected, false)
       const parent = path.resolve(parentDirectory)
-      await fs.mkdir(parent, { recursive: true })
-      const folder = path.join(parent, `${path.basename(this.root)}-${oid.slice(0, 7)}-${randomUUID().slice(0, 8)}`)
-      await this.command(['worktree', 'add', '-b', name, '--', folder, oid])
-      return { message: `已创建独立试验线 ${name}，原工作区未切换。`, worktree: folder }
+      return this.recorded('createWorktree', { oid, name, directory: parent }, expected, async record => {
+        await fs.mkdir(parent, { recursive: true })
+        const folder = path.join(parent, `${path.basename(this.root)}-${oid.slice(0, 7)}-${randomUUID().slice(0, 8)}`)
+        record.worktree = folder; await this.journal.save(record)
+        await this.command(['worktree', 'add', '-b', name, '--', folder, oid])
+        return { message: `已创建独立试验线 ${name}，原工作区未切换。`, worktree: folder }
+      })
     })
   }
 
@@ -238,12 +307,16 @@ class GitService {
       if (collision) throw new Error(`恢复会覆盖被忽略的文件 ${collision}。请先移走该文件。`)
       // Check identity before touching the worktree. Hooks may still fail; keep their output intact.
       await this.command(['var', 'GIT_AUTHOR_IDENT']); await this.command(['var', 'GIT_COMMITTER_IDENT'])
+      return this.recorded('restore', { oid }, expected, async record => {
       const backup = `gitviz/backup-${new Date().toISOString().replace(/[-:.TZ]/g, '')}-${randomUUID().slice(0, 6)}`
+      record.backup = backup; await this.journal.save(record)
       await this.guard(expected)
       await this.command(['branch', '--', backup, expected.head])
       try {
         await this.command(['restore', `--source=${oid}`, '--staged', '--worktree', '--', '.'])
-        await this.command(['commit', '-m', `Restore snapshot ${oid.slice(0, 7)}\n\nGitviz restore of ${oid}; previous HEAD preserved on ${backup}.`], { timeout: 120000 })
+        const message = `Restore snapshot ${oid.slice(0, 7)}\n\nGitviz restore of ${oid}; previous HEAD preserved on ${backup}.`
+        await this.journal.checkpoint(record, message)
+        await this.command(['commit', '-m', message], { timeout: 120000 })
       } catch (error) {
         throw new Error(`恢复未完成：${error.message}\n恢复前版本保存在 ${backup}。已产生的文件/暂存更改会保留，请检查 Git 状态并解决问题后提交；没有自动丢弃文件。`, { cause: error })
       }
@@ -251,6 +324,7 @@ class GitService {
       const actualTree = (await this.command(['rev-parse', 'HEAD^{tree}'])).trim()
       if (actualTree !== expectedTree) throw new Error(`已创建提交，但提交钩子修改了文件，结果与所选存档不完全相同。请检查差异；恢复前版本保存在 ${backup}。`)
       return { message: `已恢复为新提交，原历史保留在 ${backup}。`, backup, head: await this.head() }
+      })
     })
   }
 }

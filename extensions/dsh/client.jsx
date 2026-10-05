@@ -82,15 +82,15 @@ function Panel() {
           await ask({ title: diff.path, description: diff.oldPath !== diff.path ? `原路径：${diff.oldPath}` : '', diff })
           return {}
         }
-        if (['createBranch', 'createWorktree', 'switchBranch', 'restore'].includes(method)) {
+        if (['createBranch', 'createWorktree', 'switchBranch', 'restore', 'resumeCommit'].includes(method)) {
           let name = params.name
           if (['createBranch', 'createWorktree'].includes(method)) {
             name = await ask({ title: method === 'createWorktree' ? '从这个存档开始试验' : '为存档创建分支', input: true, label: '新分支名称', value: `gitviz/try-${params.oid.slice(0, 7)}-${Date.now().toString(36)}`, confirm: '下一步' })
             if (!name) return { cancelled: true }
           }
           const prepared = await rpc('prepare', { ...params, name, action: method })
-          const titles = { createBranch: '确认创建分支', switchBranch: '确认切换分支', createWorktree: '确认创建独立试验线', restore: '确认恢复此存档' }
-          if (!await ask({ title: titles[method], description: prepared.description, repo: prepared.repo, confirm: method === 'restore' ? '保留历史并恢复' : '确认操作' })) return { cancelled: true }
+          const titles = { createBranch: '确认创建分支', switchBranch: '确认切换分支', createWorktree: '确认创建独立试验线', restore: '确认恢复此存档', resumeCommit: '继续失败的提交' }
+          if (!await ask({ title: titles[method], description: prepared.description, repo: prepared.repo, confirm: method === 'restore' ? '保留历史并恢复' : method === 'resumeCommit' ? '检查并继续提交' : '确认操作' })) { await rpc('cancel', { token: prepared.token }); return { cancelled: true } }
           const result = await rpc('execute', { token: prepared.token })
           if (result.worktree) created.add(result.worktree)
           return result

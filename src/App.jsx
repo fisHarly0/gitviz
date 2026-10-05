@@ -13,12 +13,14 @@ import './App.css'
 import OperationDialog from './components/OperationDialog.jsx'
 import useOperationDialog from './state/useOperationDialog.js'
 import DesktopActions from './components/DesktopActions.jsx'
+import OperationHistory from './version-tree/OperationHistory.jsx'
 
 export default function App() {
   const desktop = isTauri()
   const [adapter, setAdapter] = useState(null)
   const [branches, setBranches] = useState([])
   const [refreshKey, setRefreshKey] = useState(0) // commit 后 ++ 触发 CommitGraph 重新拉
+  const [recoveryRevision, setRecoveryRevision] = useState(0)
   const [dragOver, setDragOver] = useState(false)
   const [dropError, setDropError] = useState('')
   const [repoSnapshot, setRepoSnapshot] = useState(null)
@@ -203,7 +205,7 @@ export default function App() {
         </section>
         <section className="detail-pane">
           {adapter.kind() === 'local' && <DesktopActions
-            key={`actions-${adapter.historyId}`}
+            key={`actions-${adapter.historyId}-${recoveryRevision}`}
             adapter={adapter}
             oid={session.viewingOid}
             snapshot={repoSnapshot}
@@ -216,6 +218,18 @@ export default function App() {
               handleCommitted()
             }}
           />}
+          {adapter.kind() === 'local' && <OperationHistory key={`operations-${adapter.historyId}`} load={params => adapter.historyRequest('operations', params)} refreshKey={`${refreshKey}-${operation.busy}`} blocked={operation.busy} editing={Boolean(session.editingFile)} onResume={async record => {
+            try {
+              const result = await adapter.performAction({ action: 'resumeCommit', id: record.id }, { head: session.headOid, branch: session.currentBranch })
+              if (!result.cancelled) {
+                session.switchToBranch(result.branch, result.head)
+                // A completed recovery replaces the failed action's transient feedback.
+                // Its original error remains available in the persistent operation log.
+                setRecoveryRevision(value => value + 1)
+              }
+              return result
+            } finally { handleCommitted() }
+          }}/>}
           <CommitDetail
             key={`detail-${adapter.historyId || `${adapter.spec?.owner}/${adapter.spec?.repo}`}`}
             adapter={adapter}

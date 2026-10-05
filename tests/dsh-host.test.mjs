@@ -100,3 +100,33 @@ test('diff, restore, worktree and branch switch use real Git with history retain
   await execute('createBranch', { oid: f.first, name: 'alternate' }, expected)
   assert.equal((await execute('switchBranch', { name: 'alternate' }, expected)).snapshot.branch, 'alternate')
 })
+
+test('failed restore record survives reopening, cancellation invalidates recovery ticket, and stale files reject continue', async t => {
+  const f = await fixture(t)
+  const hook = path.join(f.root, '.git', 'hooks', 'pre-commit')
+  await fs.writeFile(hook, '#!/bin/sh\necho recovery-host-hook >&2\nexit 1\n', { mode: 0o755 })
+  const { result: plan } = await f.call('prepare', { action: 'restore', oid: f.first, expected: f.expected }, f.repoId)
+  assert.match((await f.call('execute', { token: plan.token }, f.repoId)).error, /recovery-host-hook/)
+  const { result: listed } = await f.call('operations', {}, f.repoId), record = listed.records[0]
+  assert.equal(record.state, 'failed'); assert.ok(record.backup); assert.ok(record.checkpoint.tree)
+  assert.equal((await (await GitService.open(f.root)).operations()).records[0].id, record.id)
+  await fs.unlink(hook)
+  const prepare = async () => {
+    const response = await f.call('prepare', { action: 'resumeCommit', id: record.id, expected: f.expected }, f.repoId)
+    assert.equal(response.status, 200, response.error); return response.result
+  }
+  const cancel = await prepare()
+  assert.equal((await f.call('cancel', { token: cancel.token }, f.repoId)).result.cancelled, true)
+  assert.match((await f.call('execute', { token: cancel.token }, f.repoId)).error, /过期|已使用/)
+  assert.equal(await f.git.head(), f.expected.head)
+  const stale = await prepare()
+  await fs.writeFile(path.join(f.root, '中文.txt'), 'outside change\n')
+  assert.match((await f.call('execute', { token: stale.token }, f.repoId)).error, /工作文件/)
+  await f.git.command(['restore', '--', '中文.txt'])
+  const valid = await prepare()
+  const resumed = await f.call('execute', { token: valid.token }, f.repoId)
+  assert.equal(resumed.status, 200, resumed.error)
+  assert.equal(resumed.result.operationId, record.id)
+  assert.equal((await f.git.command(['rev-parse', 'HEAD^'])).trim(), f.expected.head)
+  assert.equal((await f.call('operations', {}, f.repoId)).result.records[0].state, 'completed')
+})

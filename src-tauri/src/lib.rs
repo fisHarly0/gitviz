@@ -37,6 +37,7 @@ pub fn run() {
             commands::operations::desktop_prepare,
             commands::operations::desktop_execute,
             commands::operations::desktop_cancel,
+            commands::operations::desktop_operations,
             commands::branch::current_branch,
             commands::branch::head_oid,
             commands::export::export_bundle,

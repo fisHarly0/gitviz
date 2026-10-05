@@ -152,3 +152,16 @@ body.vscode-light .version-tree {
 .history-hit > span:nth-child(2) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .history-hit small { display: block; color: var(--tree-dim); font-size: 11px; }
 .history-hit > span:last-child { color: var(--tree-green); font-size: 11px; flex-shrink: 0; }
+.operation-history { flex-shrink: 0; border-bottom: 1px solid var(--tree-border, var(--border)); background: var(--tree-panel, var(--bg-elev)); color: var(--tree-ink, var(--text)); font-size: 13px; }
+.operation-history > summary { cursor: pointer; padding: 14px 18px; font-weight: 600; }
+.operation-history summary:focus-visible { outline: 2px solid var(--tree-focus, var(--accent)); outline-offset: -3px; }
+.operation-history-content { padding: 0 18px 18px; line-height: 1.6; overflow-wrap: anywhere; }
+.operation-history-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; color: var(--tree-dim, var(--text-dim)); }
+.operation-history-list { max-height: 420px; overflow: auto; margin: 12px 0; }
+.operation-record { border-top: 1px solid var(--tree-border, var(--border)); padding: 10px 0; }
+.operation-record > summary { cursor: pointer; }
+.operation-record time { display: block; font-size: 11px; color: var(--tree-dim, var(--text-dim)); padding-top: 4px; }
+.operation-record dt { margin-top: 10px; color: var(--tree-dim, var(--text-dim)); }
+.operation-record dd { margin: 0; }
+.operation-record code { white-space: pre-wrap; }
+.operation-history-error { color: var(--tree-error, var(--danger, #ff9d9d)); white-space: pre-wrap; }
