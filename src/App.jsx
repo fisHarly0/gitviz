@@ -25,6 +25,7 @@ export default function App() {
   const [dragOver, setDragOver] = useState(false)
   const [dropError, setDropError] = useState('')
   const [repoSnapshot, setRepoSnapshot] = useState(null)
+  const [repoTrail, setRepoTrail] = useState([])
   const session = useSession()
   const operation = useOperationDialog()
   const closeGuard = useDesktopCloseGuard(desktop, operation)
@@ -39,12 +40,14 @@ export default function App() {
   const acceptAdapter = useCallback(a => {
     setupRepo([], null, '')
     setRepoSnapshot(null); setBranches([]); setRefreshKey(0); setDropError(''); setAdapter(a)
+    setRepoTrail([])
   }, [setupRepo])
-  const openLocalPath = useCallback(async path => {
+  const openLocalPath = useCallback(async (path, trail = []) => {
     if (session.editingFile) throw new Error('请先完成或取消当前编辑，再打开其他仓库。')
     return runOperation(async () => {
       const info = await openRepo(path)
       acceptAdapter(createTauriAdapter({ repo: info.path, confirm: confirmOperation, run: runOperation }))
+      setRepoTrail(trail)
     })
   }, [session.editingFile, runOperation, confirmOperation, acceptAdapter])
 
@@ -178,6 +181,12 @@ export default function App() {
         </div>
       </header>
 
+      {repoTrail.length > 0 && <nav className="trial-return" aria-label="试验工作区导航">
+        <div><strong>正在查看试验工作区</strong><p>返回只更换地图中的仓库，试验目录与修改都会保留。</p></div>
+        <button disabled={Boolean(session.editingFile) || blocked} title={repoTrail.at(-1)} onClick={() => openLocalPath(repoTrail.at(-1), repoTrail.slice(0, -1)).catch(reason => setDropError(reason.message || String(reason)))}>返回上个仓库</button>
+        {session.editingFile && <span>先完成或取消编辑，再返回。</span>}
+      </nav>}
+
       {session.mode === 'preview' && (
         <PreviewBanner
           viewingOid={session.viewingOid}
@@ -224,7 +233,7 @@ export default function App() {
             blocked={Boolean(session.editingFile) || blocked}
             editing={Boolean(session.editingFile)}
             onRefresh={handleCommitted}
-            onOpenWorktree={openLocalPath}
+            onOpenWorktree={path => openLocalPath(path, [...repoTrail, adapter.repo])}
             onResult={(result, action) => {
               if (action === 'restore') session.switchToBranch(result.branch, result.head)
               handleCommitted()

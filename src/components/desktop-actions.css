@@ -3,6 +3,7 @@
 .desktop-action-heading h2 { font-size: 14px; margin: 0; }
 .desktop-action-heading span, .desktop-action-hint { color: var(--text-dim); font-size: 13px; line-height: 1.6; }
 .desktop-action-hint { margin: 10px 0 0; }
+.desktop-action-context { font-size: 13px; line-height: 1.6; margin: 0 0 12px; }
 .desktop-action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .desktop-actions button { min-height: 36px; }
 .desktop-action-form { display: grid; gap: 14px; margin-top: 18px; max-width: 600px; }

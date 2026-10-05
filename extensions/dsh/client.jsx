@@ -47,6 +47,7 @@ function Panel() {
   const repository = useRef(null)
   const bridge = useMemo(() => {
     const created = new Set()
+    const trail = []
     const listeners = new Set()
     const rpc = async (method, params) => {
       if (method === 'snapshot' && !repository.current) {
@@ -69,13 +70,23 @@ function Panel() {
       async request(method, params = {}) {
         if (method === 'chooseRepo') {
           const folder = await ask({ title: '打开 Git 仓库', input: true, label: '本机仓库的绝对路径', placeholder: 'F:\\Codex\\projects\\my-project', confirm: '展开版本树', description: '读取 DSH 所在电脑上的仓库。选择节点只预览历史。' })
-          return folder ? rpc('open', { path: folder }) : rpc('snapshot')
+          if (!folder) return { cancelled: true }
+          const snapshot = await rpc('open', { path: folder })
+          trail.length = 0
+          return snapshot
         }
         if (method === 'openWorktree') {
           if (!created.has(params.path)) throw new Error('此工作区不是本次创建的试验目录。')
-          await rpc('open', { path: params.path })
-          for (const callback of listeners) callback()
-          return { message: `正在查看试验工作区 ${params.path}。DSH 对话的工作目录保持不变。` }
+          const previous = await rpc('snapshot')
+          const snapshot = await rpc('open', { path: params.path })
+          trail.push(previous.repo)
+          return { snapshot, returnRepo: trail.at(-1), message: '已在地图中打开试验工作区。DSH 对话的工作目录保持不变。' }
+        }
+        if (method === 'returnToRepo') {
+          if (!trail.length) throw new Error('本次会话没有可返回的仓库。')
+          const snapshot = await rpc('open', { path: trail.at(-1) })
+          trail.pop()
+          return { snapshot, returnRepo: trail.at(-1) || null, message: '已返回上个仓库。试验目录与修改保留，DSH 对话的工作目录保持不变。' }
         }
         if (method === 'openDiff') {
           const diff = await rpc('openDiff', params)

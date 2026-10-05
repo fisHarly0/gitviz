@@ -116,7 +116,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
 
   const canEdit =
     !!session &&
-    (session.mode === 'preview' || session.mode === 'edit') &&
+    (session.mode === 'preview' || session.mode === 'edit' || (session.mode === 'browse' && session.currentIfBranch)) &&
     adapter.kind() === 'local' &&
     typeof adapter.forkEdit === 'function'
 
@@ -181,6 +181,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
           {commit.author} ·{' '}
           {new Date(commit.timestamp * 1000).toLocaleString()}
         </div>
+        <p className="diff-baseline">下方显示这次提交相对父提交的文件变化；合并提交以第一个父提交为基准，首次提交以空版本为基准。</p>
       </header>
 
       {editError && <div className="error edit-error">! {editError}</div>}

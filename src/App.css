@@ -75,6 +75,11 @@ input:focus-visible {
 .repo-loader label, .repo-loader .hint { line-height: 1.6; }
 .repo-open-actions button { min-height: 40px; }
 .mode-status-bar { flex-wrap: wrap; }
+.trial-return { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--bg-elev); font-size: 13px; }
+.trial-return > div { flex: 1; min-width: 200px; }
+.trial-return p { color: var(--text-dim); margin: 4px 0 0; line-height: 1.5; }
+.trial-return button { min-height: 36px; }
+.diff-baseline { color: var(--text-dim); font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
 input {
   background: var(--bg);
   color: var(--text);

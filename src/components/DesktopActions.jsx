@@ -40,6 +40,7 @@ export default function DesktopActions({ adapter, oid, snapshot, blocked, editin
 
   return <section className="desktop-actions" aria-label="存档操作" aria-busy={pending}>
     <div className="desktop-action-heading"><h2>存档操作</h2><span>{oid ? <>目标 <code>{oid.slice(0, 7)}</code></> : '选择地图节点以查看操作'}</span></div>
+    {oid && <p className="desktop-action-context">先查看下方文件变化。想基于 <code>{oid.slice(0, 7)}</code> 尝试修改，可以从这里试一版。</p>}
     <div className="desktop-action-buttons">
       <button disabled={disabled} onClick={() => begin('createWorktree')}>从这里试一版</button>
       <button disabled={disabled} onClick={() => begin('createBranch')}>建分支</button>
@@ -48,7 +49,7 @@ export default function DesktopActions({ adapter, oid, snapshot, blocked, editin
     <p className="desktop-action-hint">试验使用独立目录；建分支保留当前位置；恢复会备份并创建新提交。</p>
     {editing && <p className="desktop-action-hint">请先完成或取消文件编辑，再操作其他存档。</p>}
     {snapshot?.dirty && <p className="desktop-action-hint">有未提交修改，切换和恢复暂不可用。可以创建独立试验目录。</p>}
-    {snapshot && !snapshot.branch && <p className="desktop-action-hint">当前为游离 HEAD。可以建分支，再从分支栏切换后恢复。</p>}
+    {snapshot?.head && !snapshot.branch && <p className="desktop-action-hint">当前为游离 HEAD。可以建分支，再从分支栏切换后恢复。</p>}
     {form && <form className="desktop-action-form" onSubmit={event => { event.preventDefault(); execute({ ...form, name: form.name.trim(), directory: form.directory.trim() }, expected()) }}>
       <label>新分支名称<input required maxLength={150} value={form.name} disabled={disabled} onChange={event => setDraft({ ...form, name: event.target.value })}/></label>
       {form.action === 'createWorktree' && <label>试验工作区的父目录<div className="desktop-directory-field"><input required value={form.directory} disabled={disabled} placeholder="输入绝对路径，或选择文件夹" onChange={event => setDraft({ ...form, directory: event.target.value })}/><button type="button" disabled={disabled} onClick={chooseDirectory}>选择目录</button></div><span className="desktop-action-hint">将在此目录下新建文件夹，不修改原仓库的文件。</span></label>}
@@ -58,7 +59,7 @@ export default function DesktopActions({ adapter, oid, snapshot, blocked, editin
     {error && <div role="alert" className="desktop-action-error"><p>{error}</p><button disabled={disabled} onClick={onRefresh}>刷新实际状态</button></div>}
     {result && <div className="desktop-action-result" role="status">
       {result.action === 'createBranch' && <p>已创建分支 <strong>{result.name}</strong>，当前文件未切换。可从分支栏切换。</p>}
-      {result.worktree && <><p>试验工作区已创建，原仓库保持不变。</p><code>{result.worktree}</code><button disabled={disabled} onClick={openWorktree}>在地图中打开试验工作区</button></>}
+      {result.worktree && <><p>试验工作区已创建，原仓库保持不变。</p><code>{result.worktree}</code><p>打开后可从顶部返回上个仓库，试验目录会保留。</p><button disabled={disabled} onClick={openWorktree}>在地图中打开试验工作区</button></>}
       {result.backup && <><p>已恢复为新提交 <code>{result.head.slice(0, 7)}</code>，后续历史保留。</p><p>恢复前的位置保存在分支：</p><code>{result.backup}</code></>}
     </div>}
   </section>

@@ -52,6 +52,12 @@ body.vscode-light .version-tree {
 .journey-bar > div { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .journey-bar strong { max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .journey-bar > span { color: var(--tree-dim); }
+.trial-navigation, .preview-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 10px 22px; border-bottom: 1px solid var(--tree-border); font-size: 12px; }
+.trial-navigation > div, .preview-navigation > span { flex: 1; min-width: 200px; }
+.trial-navigation p, .trial-created p { color: var(--tree-dim); margin: 6px 0; line-height: 1.6; }
+.trial-created { padding: 16px 20px; border-bottom: 1px solid var(--tree-border); font-size: 12px; overflow-wrap: anywhere; }
+.trial-created > code { display: block; margin: 10px 0; white-space: pre-wrap; }
+.comparison-baseline { padding: 0 20px 12px; color: var(--tree-dim); font-size: 12px; line-height: 1.6; }
 .live-dot, .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tree-green); display: inline-block; flex-shrink: 0; }
 .workspace-state { margin-left: 5px; color: var(--tree-green); }
 .workspace-state.dirty, .dirty-hint { color: var(--tree-amber); }
