@@ -26,7 +26,7 @@ function LocalHistory({ adapter, onSelect, selectedOid, refreshKey, onSnapshot, 
     <div className="desktop-history-position">实际位置：{snapshot.branch || '游离 HEAD'} <code>{snapshot.head?.slice(0, 7)}</code>{selectedOid && selectedOid !== snapshot.head ? ' · 正在预览，工作文件未切换' : ' · 点选节点只预览'}{snapshot.dirty && ' · 有未提交修改'}</div>
     {error && <p role="alert" className="history-warning">{error}</p>}
     <HistoryControls history={history} snapshot={snapshot} query={query}/>
-    {snapshot.commits.length ? <TreeMap snapshot={snapshot} selected={selectedOid || snapshot.head} onSelect={onSelect} query={query} locateOid={history.locateOid} orientation={orientation}/> : <div className="initial-state">这个仓库还没有存档点。</div>}
+    {snapshot.commits.length ? <TreeMap snapshot={snapshot} selected={selectedOid || snapshot.head} onSelect={onSelect} query={query} locateOid={history.locateOid} onLocate={oid => history.load({ target: oid })} loading={history.loading} orientation={orientation}/> : <div className="initial-state">这个仓库还没有存档点。</div>}
   </div>
 }
 

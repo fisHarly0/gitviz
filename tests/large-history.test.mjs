@@ -8,6 +8,7 @@ import { largeRepo, scratch } from './helpers/large-repo.cjs'
 import { layoutHistory } from '../src/version-tree/layout.js'
 import { visibleHistory, orientLayout } from '../src/version-tree/viewport.js'
 import { mergeHistory } from '../src/version-tree/useHistoryPaging.js'
+import { projectHistory } from '../src/version-tree/projection.js'
 
 async function loadAll(git, snapshot, limit = 1000) {
   while (snapshot.nextCursor) snapshot = mergeHistory(snapshot, await git.historyPage({ cursor: snapshot.nextCursor, limit }))
@@ -45,6 +46,13 @@ test('2000, 5000 and 10000 real commits: complete pagination, all parents, globa
     assert.ok(visible.nodes.length > 0 && visible.nodes.length < 100)
     const horizontal = orientLayout(layout, true), horizontalById = new Map(horizontal.nodes.map(n => [n.oid, n]))
     assert.ok(visibleHistory(horizontal, horizontalById, { left: horizontal.width / 2, top: 0, width: 1200, height: 800 }, 1, true).nodes.length < 100)
+    const projection = projectHistory(full.commits, { anchors: [full.head, ...full.branches.map(ref => ref.oid), ...full.tags.map(ref => ref.oid)], reveal: [full.commits[100].oid] })
+    const represent = oid => projection.representative.get(oid) || oid
+    const projectedEdges = new Set(projection.nodes.flatMap(node => node.parents.map(parent => `${node.oid}>${parent}`)))
+    const realEdges = new Set(full.commits.flatMap(node => node.parents.filter(parent => represent(parent) !== represent(node.oid)).map(parent => `${represent(node.oid)}>${represent(parent)}`)))
+    assert.deepEqual(projectedEdges, realEdges)
+    assert.ok(projection.aggregates.length > 0 && projection.nodes.length < count / 2)
+    assert.equal(projection.nodes.flatMap(node => node.members || [node.oid]).length, count)
     reports.push({ root: f.root, first: f.first, count, firstMs, loadMs, searchMs, layoutMs, visibleNodes: visible.nodes.length, edges: layout.edges.length })
     console.log(JSON.stringify(reports.at(-1)))
   }

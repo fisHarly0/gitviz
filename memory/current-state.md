@@ -2,9 +2,11 @@
 
 更新时间：2026-10-05
 
-最新批次：三端原生失败流程（基线 2aa19e4）。Windows 桌面、实装 VS Code/DSH 均通过 worktree 占用、确认后 index 锁、真实 ACL 拒绝、hook 失败及取消/继续的 UI 流程；DSH 管理页执行中停用后 worker 完成，重启用可见记录。修复桌面恢复成功后仍残留旧分支错误。当前接续见 `memory/handoff-2026-10-05-native-failure-flows.md`；完整公开交付目标保持未完成。
+最新批次：地图折叠与探索（基线 7ed3601）。三端共享连续提交折叠、引用查找/定位、父子关系附近探索；搜索/比较/键盘仍使用真实提交。Windows 桌面、实装 VS Code/DSH 各通过 10000 条真实历史的浏览检查，HEAD、工作区和引用均未变化。当前接续见 `memory/handoff-2026-10-05-map-exploration.md`；公开产品清单中 P2 地图项已关闭，完整目标保持未完成。
 
-本批 `npm test` 20/20、lint、主前端及最终桌面 release 构建通过；当前 exe 位于 `F:/Codex/work/gitviz-product/native-failure-packages/gitviz.exe`，包含此前预检/结果核对及本次 UI 修复。三端结果和截图在 `native-failure-tests/`。插件生产代码未改，复用 lifecycle 包并核对安装模块哈希。自己的测试进程已关闭。下一模块进入地图折叠、概览、节点探索；多宿主完整原生并发、其他平台与 P3 发布门禁仍待完成。
+本批 `npm test` 25/25、history:test 4/4、lint 和三端构建通过；当前开发包在 `F:/Codex/work/gitviz-product/map-final-packages/`，源码及其打包版本均实测。证据 `map-ui-tests/`；窄面板引用页不再压缩画布，返回/Esc 焦点、虚线摘要与淡化修正通过独立复核。自己的测试应用已关闭。下一模块进入首次使用或工程发布门禁；多宿主完整原生并发、其他平台、正式安装升级仍待完成。旧 0.2.0 包不会自动升级。
+
+上批三端原生失败流程（7ed3601）见 `memory/handoff-2026-10-05-native-failure-flows.md`：worktree 占用、确认后 index 锁、真实 ACL 拒绝、hook 失败及取消/继续，DSH 执行中停用后完成记录；修复桌面恢复成功后的旧分支提示。
 
 上批插件生命周期见 `memory/handoff-2026-10-05-plugin-lifecycle.md`：独立 worker、迟到确认拒绝、VS Code 实装退出验证。extension:test 45/45、DSH 共 10 个不同用例及 Node/Electron worker 退出测试通过。强杀 worker/整个进程树或断电仍可留下未完成现场。
 

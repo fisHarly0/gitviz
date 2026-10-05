@@ -66,8 +66,32 @@ body.vscode-light .version-tree {
 .map-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 18px 22px 13px; }
 .map-heading > div > span { font-size: 11px; color: var(--tree-dim); display: block; margin-top: 4px; }
 .map-heading button { font-size: 12px; }
+.map-navigation { flex-shrink: 0; max-height: 42%; overflow: auto; padding: 0 18px 10px; border-bottom: 1px solid var(--tree-border); }
+.map-navigation-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.map-navigation button { font-size: 11px; padding: 6px 8px; }
+.map-navigation button[aria-pressed="true"], .map-navigation button[aria-expanded="true"] { color: var(--tree-green); border-color: var(--tree-green); }
+.map-projection-note, .map-scope { margin-top: 8px !important; font-size: 11px; color: var(--tree-dim); }
+.map-scope { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.map-scope label { display: flex; align-items: center; gap: 6px; }
+.map-scope select, .map-overview input { background: var(--tree-panel); border: 1px solid var(--tree-border); border-radius: 5px; padding: 5px 8px; min-width: 0; }
+.map-content { flex: 1; min-height: 0; position: relative; display: flex; }
+.map-overview { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px 18px; background: var(--tree-panel); }
+.map-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.map-overview-heading h3 { font-size: 13px; font-weight: 600; }
+.map-overview button { font-size: 11px; padding: 6px 8px; }
+.map-overview > label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+.map-overview input { flex: 1; caret-color: var(--tree-green); }
+.map-overview input::placeholder { color: var(--tree-dim); opacity: 1; }
+.map-overview > p, .map-ref-list > p { font-size: 11px; color: var(--tree-dim); }
+.map-ref-list { flex: 1; min-height: 0; overflow: auto; }
+.map-ref-list button { display: flex; width: 100%; background: transparent; border-width: 0 0 1px; border-radius: 0; justify-content: flex-start; text-align: left; }
+.map-ref-list strong { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 550; }
+.map-ref-list button > span, .map-ref-list small { color: var(--tree-dim); font-size: 10px; flex-shrink: 0; }
+.version-tree button.save-node.folded-node { border-style: dashed; color: var(--tree-dim); background: var(--tree-bg); }
+.folded-node .node-top { color: var(--tree-ink); }
 .map-viewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; touch-action: pan-x pan-y; background-image: radial-gradient(circle, color-mix(in srgb, var(--tree-dim) 18%, transparent) .75px, transparent .75px); background-size: 24px 24px; }
 .map-viewport:active { cursor: grabbing; }
+.map-viewport[aria-hidden="true"] { visibility: hidden; }
 .map-space { position: relative; min-width: 100%; }
 .map-world { transform-origin: top left; position: relative; }
 .map-lines { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
