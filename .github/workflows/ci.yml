@@ -102,6 +102,7 @@ jobs:
       - name: Collect native artifacts
         shell: pwsh
         run: |
+          Copy-Item -LiteralPath 'LICENSE' -Destination "$env:GITVIZ_ARTIFACTS_DIR/LICENSE"
           if ($IsWindows) {
             Copy-Item -LiteralPath 'src-tauri/target/release/gitviz.exe' -Destination "$env:GITVIZ_ARTIFACTS_DIR/gitviz-windows-x64.exe"
             Get-ChildItem -LiteralPath 'src-tauri/target/release/bundle/nsis' -Filter '*-setup.exe' | Copy-Item -Destination $env:GITVIZ_ARTIFACTS_DIR

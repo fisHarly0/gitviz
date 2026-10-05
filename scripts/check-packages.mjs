@@ -18,10 +18,13 @@ export async function checkPackages(directory = process.env.GITVIZ_ARTIFACTS_DIR
   }
   assert.equal((await zip.file('extension/LICENSE').async('string')).replaceAll('\r\n', '\n'), rootLicense)
   const archive = path.resolve(directory, `fisharly-gitviz-dsh-${version}.tgz`)
-  const entries = execFileSync('tar', ['-tf', archive], { encoding: 'utf8' }).trim().split(/\r?\n/)
+  // GNU tar interprets Windows drive letters as remote hosts; pass a basename in cwd.
+  const tarOptions = { cwd: path.dirname(archive), encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }
+  const archiveName = path.basename(archive)
+  const entries = execFileSync('tar', ['-tf', archiveName], tarOptions).trim().split(/\r?\n/)
   assert.equal(new Set(entries).size, entries.length, 'Duplicate archive paths')
   for (const name of entries) assert.ok(/^package\//.test(name) && !name.split('/').includes('..') && !/\.(env|map)$/.test(name), `Unexpected archive path: ${name}`)
-  const read = file => execFileSync('tar', ['-xOf', archive, `package/${file}`], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 })
+  const read = file => execFileSync('tar', ['-xOf', archiveName, `package/${file}`], tarOptions)
   const dsh = JSON.parse(read('package.json'))
   assert.equal(dsh.version, version); assert.equal(dsh.license, 'MIT')
   for (const file of ['index.mjs', 'host.mjs', 'cordis.patch.yml', 'dist/client.js', 'dist/git-service.cjs', 'dist/git-process.cjs', 'dist/operation-journal.cjs', 'dist/operation-host.cjs', 'dist/operation-worker.cjs', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.txt']) assert.ok(read(file).length, `DSH missing ${file}`)

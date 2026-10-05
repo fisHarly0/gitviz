@@ -4,6 +4,10 @@ F:/gitviz，main，基线 51cb87e。用户持续授权公开产品完善及提�
 
 新增三系统 CI、版本同步/检查、插件完整性/重复打包测试、产物 manifest/校验和、根 MIT 许可证、贡献/安全反馈/交付说明。统一源码开发版本 0.3.0；Tauri 工具缓存改用项目 target，NSIS 在 Windows CI 中构建。Rust CI 大历史 fixture 缺失或不足时明确失败。
 
-本机已通过版本检查、lint、25 项前端测试、两个插件前端构建、包内容检查、2 项交付测试（版本错配/缺失 worker 拒绝/两次打包字节一致）。本批原生 `cargo check/test` 正在执行，日志 `F:/Codex/work/gitviz-product/delivery-cargo-{check,test}.log`；CI 尚待首次推送后取真实运行证据。不能将工作流文件存在算作 CI 验收通过。
+本机已通过版本检查、lint、25 项前端测试、两个插件前端构建、包内容检查、2 项交付测试（版本错配/缺失 worker 拒绝/两次打包字节一致）。`cargo check --locked --all-targets` 已通过，随后同一个执行会话 80835 正在编译并运行 Rust 测试，日志 `F:/Codex/work/gitviz-product/delivery-cargo-{check,test}.log`。不能将工作流文件存在算作 CI 验收通过。
+
+已推送 53a6be4 和 95d6d9c。首轮工作流因 job env 使用 runner context 被解析器拒绝，已改为启动步骤写 GITHUB_ENV。实际运行 `37281063992`（95d6d9c）：三系统 Node/真实 Git/DSH/大历史均通过；Linux/macOS 包校验及 Rust 测试通过，正在构建桌面。Windows 在包校验失败：GNU tar 将绝对盘符当远程主机；已修正为 cwd + basename，并用本机 GNU tar 1.35 跑完整包校验及重复打包测试通过。日志 `delivery-ci-windows-failure.log`。修正连同安装包许可证/发布说明草稿先保存，等待当前 Linux/macOS job 结束并保存缓存再推送复验，避免取消仍在编译的有效任务。
+
+CI 地址：https://github.com/fisHarly0/gitviz/actions/runs/37281063992 。Linux job 111669019958，Windows job 111669020077（已失败终态），macOS job 111669020274。后续先检查这些具体任务和本机 80835，不因等待时间较长重启构建。旧 CI 结束后推送后续修正并跟踪新 run；新版 Windows 原生包尚未得到证据。
 
 暂存与产物：F:/Codex/work/gitviz-product/delivery-*；npm/Cargo 缓存均在 F:/dev/cache。正式 Release、安装升级验收、签名公证、三端原生最终包验收、P1 多宿主并发和 P2 首次使用仍未完成。完整公开产品目标保持 active。

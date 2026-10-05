@@ -2,7 +2,7 @@
 
 更新时间：2026-10-05
 
-正在推进：P3 工程交付（基线 51cb87e），版本统一到 0.3.0 开发版；新增三系统 CI、包校验和交付文档，本机静态/插件打包门禁通过，Rust 与首次远端 CI 结果待取。接续见 `memory/handoff-2026-10-05-delivery-pipeline.md`。这不是正式发行。
+正在推进：P3 工程交付（基线 51cb87e），版本统一到 0.3.0 开发版；三系统 CI 已实际运行。三系统 Node 流程及 Linux/macOS Rust 测试已通过，Linux/macOS 原生构建仍在运行；Windows tar 路径问题已本地修正验证，待复验。本机 Rust check 通过、test 执行会话 80835 仍活跃。接续运行 ID、修正与推送顺序见 `memory/handoff-2026-10-05-delivery-pipeline.md`。这不是正式发行。
 
 最新批次：地图折叠与探索（基线 7ed3601）。三端共享连续提交折叠、引用查找/定位、父子关系附近探索；搜索/比较/键盘仍使用真实提交。Windows 桌面、实装 VS Code/DSH 各通过 10000 条真实历史的浏览检查，HEAD、工作区和引用均未变化。当前接续见 `memory/handoff-2026-10-05-map-exploration.md`；公开产品清单中 P2 地图项已关闭，完整目标保持未完成。
 
