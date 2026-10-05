@@ -31,18 +31,23 @@ jobs:
       CARGO_BUILD_JOBS: '2'
       RUST_MIN_STACK: '8388608'
       RAYON_NUM_THREADS: '2'
-      CARGO_HOME: ${{ runner.temp }}/cargo
-      npm_config_cache: ${{ runner.temp }}/npm-cache
-      GITVIZ_TEST_ROOT: ${{ runner.temp }}/gitviz-tests
-      GITVIZ_PRODUCT_TEST_ROOT: ${{ runner.temp }}/gitviz-rust-tests
-      GITVIZ_LARGE_TEST_ROOT: ${{ runner.temp }}/gitviz-history
-      GITVIZ_HISTORY_FIXTURES: ${{ runner.temp }}/gitviz-history/report.json
-      GITVIZ_DELIVERY_TEST_ROOT: ${{ runner.temp }}/gitviz-delivery
-      GITVIZ_ARTIFACTS_DIR: ${{ runner.temp }}/gitviz-artifacts
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Isolated cache and fixture paths
+        shell: pwsh
+        run: |
+          @{
+            CARGO_HOME = 'cargo'
+            npm_config_cache = 'npm-cache'
+            GITVIZ_TEST_ROOT = 'gitviz-tests'
+            GITVIZ_PRODUCT_TEST_ROOT = 'gitviz-rust-tests'
+            GITVIZ_LARGE_TEST_ROOT = 'gitviz-history'
+            GITVIZ_HISTORY_FIXTURES = 'gitviz-history/report.json'
+            GITVIZ_DELIVERY_TEST_ROOT = 'gitviz-delivery'
+            GITVIZ_ARTIFACTS_DIR = 'gitviz-artifacts'
+          }.GetEnumerator() | ForEach-Object { "$($_.Key)=$env:RUNNER_TEMP/$($_.Value)" >> $env:GITHUB_ENV }
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
