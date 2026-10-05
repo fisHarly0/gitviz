@@ -33,6 +33,21 @@ VS Code 会改写 manifest 排版并追加 `__metadata`，因此仅对该文件�
 
 本轮证据位于 `F:/Codex/work/gitviz-product/vscode-upgrade-030/`；旧包 SHA-256 和新版 CI 包 SHA-256 见 `result-old.json`、`result-upgraded.json`。整理后的 PowerShell 驱动在包含空格的全新目录 `F:/Codex/work/gitviz-product/vscode upgrade verified/` 再次全部通过，覆盖冷启动引导、升级和重启恢复。测试应用已正常关闭，9235 端口已释放。
 
+## DSH 0.2.0 → 0.3.0
+
+Windows 的 DeepSeek Harness 0.2.0-rc.2 Web profile 已实测原 0.2.0 tarball → 提交 `51a873c` 的 CI 0.3.0 tarball：
+
+- 全新独立 `DSH_HOME`，通过 `dsh plugin --profile web add <包路径>` 安装与更新。启用的 bundle 仍只有一个，安装文件逐项 SHA 与对应 tarball 一致。
+- 在 VS Code Integrated Browser 实际打开 DSH。升级后重启 DSH 服务，原浏览器标签页的仓库选择保留；HEAD、引用、index 字节和工作文件不变，旧提交仍可浏览，新地图折叠可用。
+- 新版通过界面确认恢复，真实 hook 拒绝提交；再次重启 DSH 后核对同一失败记录原样保留，移除测试 hook，再从界面确认继续提交。备份、父提交、目标 tree、清洁状态和两次尝试记录均正确。
+- 从浏览器启动清单解析插件脚本地址，核对服务器返回的客户端代码与安装的 `dist/client.js` 一致；额外内容仅为 DSH 添加的 source-map 注释。不是只验证磁盘上装了新版。
+
+证据位于 `F:/Codex/work/gitviz-product/dsh-upgrade-030/`：`result-{old,upgraded,restarted}.json`、对应 PNG 和 `served-client-verification.json`。新版包 SHA-256 为 `303f7776abd7d12fd8b99367576bc41ae0b5e7b94807fc40a90a2ce94a40c689`。本次在同一浏览器标签页重启服务；没有把 `sessionStorage` 描述为跨关闭浏览器的永久设置。失败记录在新版创建，不声称旧版已有新版日志格式。
+
+开发验收入口为 `tests/dsh-upgrade-smoke.cjs old|upgraded|restarted`，需提供 `GITVIZ_DSH_UPGRADE_ROOT`、`GITVIZ_OLD_DSH`、`GITVIZ_NEW_DSH`、`PLAYWRIGHT_CORE_PATH`。先在该 scratch 的 `home` 中用官方 CLI 安装旧包、以 3087 端口启动 DSH，并用隔离的 VS Code Integrated Browser 打开它；运行 `old`。确认 Git 操作结束后停止自己的服务，官方 CLI 更新包并启动新进程，运行 `upgraded`；再重启服务运行 `restarted`。将每阶段服务 stdout 保存为 scratch 中的 `server-{阶段}.log`，PID 保存为 `dsh.pid`。脚本用启动日志加载对应服务，不输出其登录 URL。所需启动/重启由操作者完成，脚本不会接管日常服务。
+
+本轮只使用合成仓库，没有模型调用；pnpm store 位于 F 盘。自己的 DSH 服务已停止，承载页面的 VS Code 已通过 File → Exit 退出，3087/9235 监听已释放。
+
 ## 仍需验收
 
-DSH 0.2.0 → 0.3.0 的实际插件升级、桌面免安装旧版到 NSIS 的用户数据衔接、最终三端完整冒烟，以及其他操作系统的原生 UI 尚未因本页证据关闭。签名、公证和正式外部发布也不在上述检查范围内。
+桌面免安装旧版到 NSIS 的用户数据衔接、已安装桌面的写入/恢复冒烟，以及其他操作系统的原生 UI 尚未因本页证据关闭。签名、公证和正式外部发布也不在上述检查范围内。

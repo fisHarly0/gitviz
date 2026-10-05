@@ -9,6 +9,24 @@ const quote = value => "'" + value.replaceAll('\\', '/').replaceAll("'", "'\\''"
 const hookScript = path.join(__dirname, 'helpers/slow-git-hook.cjs')
 const alive = pid => { try { process.kill(pid, 0); return true } catch (error) { if (error.code === 'ESRCH') return false; throw error } }
 
+async function cleanupKnownFixture(f, owned) {
+  if (!owned) return
+  try { await terminateTree(owned) }
+  catch (error) {
+    // taskkill can kill the hook first, then find Git already exited while
+    // walking upwards. This exception is only for this known test fixture,
+    // never for production cleanup or the uncertainty/lock assertions below.
+    if (process.platform !== 'win32' || error.code !== 128) throw error
+    assert.equal(alive(owned.pid), false, 'fixture Git still runs after taskkill failure')
+    for (const name of ['parent', 'child']) {
+      const pid = Number(await fs.readFile(path.join(f.folder, `.git/process-${name}.pid`), 'utf8'))
+      assert.equal(alive(pid), false, `fixture hook ${name} still runs after taskkill failure`)
+      const beat = path.join(f.folder, `.git/process-${name}.heartbeat`), before = await fs.readFile(beat, 'utf8')
+      await delay(300); assert.equal(await fs.readFile(beat, 'utf8'), before)
+    }
+  }
+}
+
 async function fixture() {
   await fs.mkdir(root, { recursive: true })
   const folder = await fs.mkdtemp(path.join(root, 'process-')), git = new GitService(folder)
@@ -82,7 +100,7 @@ test('unconfirmed cleanup keeps the repository lock and blocks further writes', 
     await assert.rejects(f.git.createBranch(f.first, 'unsafe-retry', f.expected), /不能继续写入/)
     const record = (await f.git.operations()).records[0]
     assert.equal(record.state, 'failed'); assert.match(record.error, /无法确认 Git/)
-  } finally { if (owned) await terminateTree(owned) }
+  } finally { await cleanupKnownFixture(f, owned) }
 })
 
 test('Windows exited parent with an inherited pipe returns bounded uncertainty instead of hanging', { skip: process.platform !== 'win32' }, async () => {

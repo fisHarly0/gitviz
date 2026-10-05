@@ -2,6 +2,16 @@
 
 项目 F:/gitviz，main；用户持续授权公开产品完善及提交/push。完整目标 spec/modules/public-product.md。P3 工程交付已关闭，P3 发布验证与 P1/P2 剩余项继续，不代表正式发行。
 
+## 最新接续（本节优先于历史记录）
+
+- 基线 b708b5e；本轮 DSH 原0.2.0 → CI51a873c的0.3.0三阶段实际升级/重启恢复通过，详见 docs/upgrade-testing.md。测试源码 tests/dsh-upgrade-smoke.cjs、tests/helpers/dsh-client-source.cjs；所有写入均在新建合成仓库。
+- 证据 F:/Codex/work/gitviz-product/dsh-upgrade-030/result-{old,upgraded,restarted}.json、同阶段截图及 served-client-verification.json。浏览器使用隔离VSCode Integrated Browser，DSH_HOME 为 scratch/home。CLI plugin add 保持bundle唯一，逐文件包SHA、实际客户端资源、新版hook失败重启后同一记录续交、parent/tree/backup/clean全部核对。服务重启是操作完成后停止自己的Node进程再启动；同一浏览器标签页保留，未声称跨关闭浏览器保存sessionStorage。
+- 首次页面遇到延迟出现的模型设置弹窗，测试等待后选择“稍后配置”；服务日志尚未输出启动URL时增加有界等待，复用同一新服务重试，没有因观察超时另开服务。实际截图已查看。客户端返回值是原始client.js加source-map注释，helper已独立在当前真实页面通过。
+- DSH1540及VSCode7132已退出，3087/9235无监听；所有本机测试会话结束。VSCode CloseMainWindow没有成功退出，改用实际File→Exit正常关闭。没有日常配置、模型凭据或真实仓库写入。
+- CI 37286170167（b708b5e）已终态：Linux/macOS成功，Windows111685481052失败。日志 delivery-ci-b708b5e-windows-failure.log：安全写锁断言通过，finally的taskkill /PID 8172 /T /F退出128，明示两个进程已不存在。本批 tests/git-process.test.cjs 的 cleanupKnownFixture 仅在Windows128且Git及两个已知hook PID均不存在、心跳停止时接受；仍有活进程或其他错误继续失败，生产执行器不变。
+- Git 2.55.0真实进程4/4、人工注入“真实清理后128”通过；负注入“清理前128”按预期拒绝活Git，延后清理完成后再次确认hook PID消失。lint、前端build通过。故障注入preload脚本在F盘scratch，不打包进入生产。
+- 本轮提交/push后跟踪新CI；下一产品验收是桌面旧0.2.0免安装 → 0.3.0NSIS的数据衔接及实际安装程序写入恢复，而不是重复DSH升级。当前生产偶发不确定清理问题仍保守保留，不把测试finally修正等同生产修复。
+
 ## 权威验证来源
 
 - 已推送的生产代码提交 51a873c；42753af 仅接续文档。CI https://github.com/fisHarly0/gitviz/actions/runs/37283842186 三系统全部成功，已核对各 job 完成状态。
@@ -31,7 +41,7 @@
 
 ## 下一步顺序
 
-1. DSH 原 0.2.0 → CI 0.3.0 真正安装/重启/原生浏览写入与持久状态验收；用独立 DSH_HOME，禁止使用日常配置。既有 DSH可执行入口 C:/Users/Harly/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/lib/bin.js，当前测试home F:/Codex/work/gitviz-dsh/home（旧记录），先核对再启动。独立 Chromium 曾被自动审批拒绝，继续使用 VS Code Integrated Browser。
+1. DSH 升级本轮已完成；真实入口与旧证据保留，后续继续桌面数据衔接。独立 Chromium 曾被自动审批拒绝，后续原生宿主测试仍用允许的集成浏览器。
 2. 桌面原0.2.0免安装版到0.3.0NSIS的数据衔接；不存在旧0.2.0NSIS可冒充跨版本安装器升级。
 3. P1 多宿主同时操作的原生完整流程及偶发清理问题，P2首次使用与缺Git恢复；其他平台UI需强证据后才声明支持。
 4. 逐项审查公开产品清单，准备最终支持平台、版本和产物，不能用P3工程项通过替代完整产品完成。

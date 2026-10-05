@@ -109,11 +109,21 @@
   "status": "development-validation-only",
   "runUrl": "https://github.com/fisHarly0/gitviz/actions/runs/37283842186",
   "remainingReleaseGates": [
-    "DSH upgrade and final native validation",
+    "installed desktop write and recovery smoke",
     "desktop 0.2.0 portable to 0.3.0 installer data continuity",
     "multi-host native concurrency",
     "first-use UX and missing Git recovery",
     "Linux/macOS native UI",
     "final release packages and supported platform declaration"
-  ]
+  ],
+  "dshUpgrade": {
+    "host": "DeepSeek Harness 0.2.0-rc.2 Web on Windows",
+    "from": "0.2.0",
+    "to": "0.3.0",
+    "packageSHA256": "303f7776abd7d12fd8b99367576bc41ae0b5e7b94807fc40a90a2ce94a40c689",
+    "enabledBundlePreserved": true,
+    "sameBrowserTabRepositoryPreserved": true,
+    "newVersionFailedOperationResumedAfterServerRestart": true,
+    "installedFilesAndServedClientVerified": true
+  }
 }
