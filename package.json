@@ -30,7 +30,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@gitgraph/react": "^1.6.0",
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.1",
     "@tauri-apps/plugin-dialog": "^2.7.1",

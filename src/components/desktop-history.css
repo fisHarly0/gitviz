@@ -9,3 +9,21 @@
 .desktop-history .history-progress { padding: 8px 12px; }
 .desktop-history .history-progress > span { flex-basis: 100%; }
 .desktop-history .map-heading { padding: 12px; }
+.github-history .github-scope { margin: 0; padding: 8px 12px; color: var(--tree-dim); font-size: 12px; }
+.github-history .github-warnings { margin: 8px 12px; font-size: 12px; color: var(--tree-amber); }
+.github-warnings summary { cursor: pointer; }
+.github-warnings ul { max-height: 110px; overflow: auto; padding-left: 20px; overflow-wrap: anywhere; }
+.github-history .error { margin: 8px 12px; }
+.detail-read-error { padding: 16px; }
+.app:has(.github-history) .split { grid-template-columns: minmax(420px, 48%) 1fr; }
+.app:has(.github-history) .source-info .switch { white-space: nowrap; }
+.app:has(.github-history) .diff-baseline a { color: var(--accent); text-underline-offset: 3px; }
+.app:has(.github-history) .commit-detail header { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .app:has(.github-history) .split { display: flex; flex-direction: column; overflow: auto; }
+  .app:has(.github-history) .graph-pane { flex: none; min-height: 650px; height: 85vh; border-right: 0; }
+  .app:has(.github-history) .detail-pane { flex: none; overflow: visible; }
+  .app:has(.github-history) .files-and-diff { display: flex; flex-direction: column; }
+  .app:has(.github-history) .file-list { max-height: 160px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .app:has(.github-history) .diff-pane { min-height: 140px; }
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import ReactDiffViewer from 'react-diff-viewer-continued'
 import EditorPanel from './EditorPanel.jsx'
 import { makeIfBranchName } from '../state/useSession.js'
+import { githubErrorMessage } from '../adapters/githubHistory.js'
 
 function StatusBadge({ status }) {
   const colors = {
@@ -22,7 +23,7 @@ function StatusBadge({ status }) {
 
 function CommitDetailSkeleton() {
   return (
-    <div className="commit-detail">
+    <div className="commit-detail" role="status" aria-label="正在读取提交详情">
       <header>
         <div className="skel-line oid" />
         <div className="skel-line msg" style={{ marginTop: 8 }} />
@@ -49,8 +50,8 @@ function CommitDetailSkeleton() {
   )
 }
 
-function PatchView({ patch }) {
-  if (!patch) return <div className="muted">没有可显示的文本差异。</div>
+function PatchView({ patch, remote }) {
+  if (!patch) return <div className="muted">{remote ? 'GitHub 未提供这个文件的文本差异，可能是二进制文件或差异过大。可在 GitHub 查看原提交；这不表示文件没有变化。' : '没有可显示的文本差异。'}</div>
   return (
     <pre className="patch">
       {patch.split('\n').map((line, i) => {
@@ -76,37 +77,40 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
   const [activeFile, setActiveFile] = useState(null)
   const [editError, setEditError] = useState('')
   const [editBusy, setEditBusy] = useState(false)
+  const [revision, setRevision] = useState(0)
 
   useEffect(() => {
     if (!oid) return
     let cancelled = false
+    const controller = new AbortController()
     ;(async () => {
       // deps 变化时 reset，lint 对此误报 set-state-in-effect
       setLoading(true)
       setError('')
       setActiveFile(null)
       try {
-        const d = await adapter.getCommitDetail(oid)
+        const d = await adapter.getCommitDetail(oid, { signal: controller.signal })
         if (cancelled) return
         setDetail(d)
         if (d.files.length > 0) setActiveFile(d.files[0].path)
         setLoading(false)
       } catch (err) {
         if (cancelled) return
-        setError(err.message || String(err))
+        setError(adapter.kind() === 'github' ? githubErrorMessage(err) : err.message || String(err))
         setLoading(false)
       }
     })()
     return () => {
       cancelled = true
+      controller.abort()
     }
-  }, [adapter, oid])
+  }, [adapter, oid, revision])
 
   if (!oid) {
     return <div className="placeholder">选择地图中的存档，查看提交说明和文件变化。</div>
   }
   if (loading) return <CommitDetailSkeleton />
-  if (error) return <div className="error">{error}</div>
+  if (error) return <div className="detail-read-error"><p className="error" role="alert">{error}</p><button onClick={() => setRevision(value => value + 1)}>重新读取详情</button></div>
   if (!detail) return null
 
   const { commit, files } = detail
@@ -182,6 +186,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
           {new Date(commit.timestamp * 1000).toLocaleString()}
         </div>
         <p className="diff-baseline">下方显示这次提交相对父提交的文件变化；合并提交以第一个父提交为基准，首次提交以空版本为基准。</p>
+        {detail.url && <p className="diff-baseline">{detail.filesPartial ? `当前仅显示前 ${files.length} 个变化文件，列表不完整。` : '文本差异由 GitHub 提供，可能省略或截断。'} <a href={detail.url} target="_blank" rel="noreferrer">在 GitHub 查看原提交</a></p>}
       </header>
 
       {editError && <div className="error edit-error">! {editError}</div>}
@@ -227,7 +232,7 @@ export default function CommitDetail({ adapter, oid, session, onCommitted, onDra
               useDarkTheme
             />
           )}
-          {file && !useSideBySide && <PatchView patch={file.patch} />}
+          {file && !useSideBySide && <PatchView patch={file.patch} remote={adapter.kind() === 'github'} />}
           {!file && <div className="muted">选择文件以查看差异。</div>}
         </div>
       </div>

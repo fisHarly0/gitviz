@@ -23,6 +23,7 @@ export default function IfLinesPanel({
 }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const readOnly = adapter.kind() !== 'local'
   if (!branches || branches.length === 0) return null
 
   const mainRef = branches.find((b) => b.name === mainBranch)
@@ -51,13 +52,14 @@ export default function IfLinesPanel({
   return (
     <div className="if-lines-panel">
       <div className="if-lines-row">
-        <span className="lbl">本地分支</span>
+        <span className="lbl">{readOnly ? '远程分支' : '本地分支'}</span>
         {mainRef && (
           <button
             className={`branch-chip main ${currentBranch === mainBranch ? 'active' : ''}`}
             onClick={() => switchTo(mainRef)}
             disabled={busy || editing || dirty}
-            title={`切换到 ${mainBranch}（HEAD = ${short(mainRef.oid)}）`}
+            aria-pressed={currentBranch === mainBranch}
+            title={readOnly ? `查看 ${mainBranch}（${short(mainRef.oid)}），不切换仓库` : `切换到 ${mainBranch}（HEAD = ${short(mainRef.oid)}）`}
           >
             <span className="dot" />
             {mainBranch}
@@ -70,7 +72,8 @@ export default function IfLinesPanel({
             className={`branch-chip if i${i % 5} ${currentBranch === b.name ? 'active' : ''}`}
             onClick={() => switchTo(b)}
             disabled={busy || editing || dirty}
-            title={`切换到 ${b.name}（HEAD = ${short(b.oid)}）`}
+            aria-pressed={currentBranch === b.name}
+            title={readOnly ? `查看 ${b.name}（${short(b.oid)}），不切换仓库` : `切换到 ${b.name}（HEAD = ${short(b.oid)}）`}
           >
             <span className="dot" />
             {b.name}

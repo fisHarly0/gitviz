@@ -8,7 +8,7 @@ const COLORS = ['var(--tree-green)', 'var(--tree-amber)', 'var(--tree-blue)', 'v
 const short = oid => oid?.slice(0, 7)
 const EMPTY = []
 
-export default function TreeMap({ snapshot, selected, onSelect, comparing, compareOids = EMPTY, focusOid, query = '', locateOid, onLocate, loading, orientation = 'vertical' }) {
+export default function TreeMap({ snapshot, selected, onSelect, comparing, compareOids = EMPTY, focusOid, query = '', locateOid, onLocate, loading, orientation = 'vertical', readOnly = false }) {
   const horizontal = orientation === 'horizontal'
   const [compact, setCompact] = useState(true), [expanded, setExpanded] = useState(new Set())
   const [exploration, setExploration] = useState(null), [radius, setRadius] = useState(2)
@@ -61,12 +61,12 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
     const node = byId.get(oid), element = viewport.current
     if (!node || !element) return
     const previous = lastLocation.current
-    if (previous?.oid === oid && previous.navigation === navigation && previous.external === locateOid && previous.scale === scale && previous.horizontal === horizontal) return
-    lastLocation.current = { oid, navigation, external: locateOid, scale, horizontal }
+    if (previous?.oid === oid && previous.navigation === navigation && previous.external === locateOid && previous.scale === scale && previous.horizontal === horizontal && previous.width === box.width && previous.height === box.height) return
+    lastLocation.current = { oid, navigation, external: locateOid, scale, horizontal, width: box.width, height: box.height }
     pendingFocus.current = oid
     element.scrollTo({ left: Math.max(0, (node.x + 94) * scale - element.clientWidth / 2), top: Math.max(0, node.y * scale - 90), behavior: 'instant' })
     requestAnimationFrame(() => element.querySelector(`[data-oid="${oid}"]`)?.focus({ preventScroll: true }))
-  }, [selected, navigation, locateOid, byId, scale, horizontal])
+  }, [selected, navigation, locateOid, byId, scale, horizontal, box.width, box.height])
   const matches = node => node.folded ? node.members.some(oid => matching.has(oid)) : matching.has(node.oid)
   const zoom = amount => setScale(value => Math.max(0.35, Math.min(1.6, Math.round((value + amount) * 100) / 100)))
   const locate = oid => {
@@ -89,7 +89,7 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
   return <section className="tree-map" aria-label="交互式版本树">
     <div className="map-heading">
       <div><h2>版本地图</h2><span>{query ? `已加载中 ${resultCount} 个匹配` : `${snapshot.commits.length} 个存档点`}<span className="map-heading-note"> · {horizontal ? '新版本在左，祖先在右' : '新版本在上，共同起点在下'}</span></span></div>
-      <button className="quiet" onClick={() => jump(snapshot.head)} disabled={!snapshot.head || !fullById.has(snapshot.head)}><Icon name="target"/>当前位置</button>
+      <button className="quiet" onClick={() => jump(snapshot.head)} disabled={!snapshot.head || !fullById.has(snapshot.head)}><Icon name="target"/>{readOnly ? '浏览基准' : '当前位置'}</button>
     </div>
     <div className="map-navigation">
       <div className="map-navigation-actions">
@@ -151,10 +151,10 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
             const nodeRefs = refs.get(node.oid) || []
             return <button key={node.oid} data-oid={node.oid} className={`save-node ${active ? 'selected' : ''} ${head ? 'at-head' : ''} ${muted ? 'muted' : ''} ${compareIndex >= 0 ? 'compared' : ''}`}
               style={{ left: node.x, top: node.y, '--lane': COLORS[node.lane % COLORS.length] }}
-              aria-label={`${head ? '当前位置，' : ''}${node.message}，${short(node.oid)}`} aria-pressed={active} tabIndex={active || (!selected && head) ? 0 : -1}
-              title={`${node.message}\n${node.author}\n${nodeRefs.map(ref => ref.name).join(' · ')}\n${comparing ? '选择比较节点' : '点击预览；Shift + 点击加入比较'}`}
+              aria-label={`${head ? (readOnly ? '浏览基准，' : '当前位置，') : ''}${node.message}，${short(node.oid)}`} aria-pressed={active} tabIndex={active || (!selected && head) ? 0 : -1}
+              title={`${node.message}\n${node.author}\n${nodeRefs.map(ref => ref.name).join(' · ')}\n${readOnly ? '点击只读预览' : comparing ? '选择比较节点' : '点击预览；Shift + 点击加入比较'}`}
               onClick={event => pick(node.oid, event.shiftKey)}>
-              <span className="node-top"><span className="node-marker"/><code>{short(node.oid)}</code>{head && <span className="head-label">你在这里</span>}{compareIndex >= 0 && <span className="compare-label">{compareIndex === 0 ? 'A' : 'B'}</span>}{node.parents.length > 1 && <Icon name="fork" size={14}/>}</span>
+              <span className="node-top"><span className="node-marker"/><code>{short(node.oid)}</code>{head && <span className="head-label">{readOnly ? '浏览基准' : '你在这里'}</span>}{compareIndex >= 0 && <span className="compare-label">{compareIndex === 0 ? 'A' : 'B'}</span>}{node.parents.length > 1 && <Icon name="fork" size={14}/>}</span>
               <span className="node-message">{node.message}</span>
               <span className="node-foot">{node.outsideWindow ? '较旧的当前位置 · 单独保留' : nodeRefs.length ? nodeRefs.map(ref => ref.name).join(' · ') : node.parents.length === 0 ? '故事的起点' : node.author}</span>
             </button>
@@ -165,6 +165,6 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
       {query && resultCount === 0 && <div className="map-no-results">没有找到“{query}”，试试提交说明、作者或编号。</div>}
     </div>
     </div>
-    <div className="map-footer"><span><i className="legend-dot"/>当前位置 <i className="legend-ring"/>正在预览<span className="map-heading-note"> · 拖动空白平移，↑ ↓ 选择节点</span></span><div className="zoom-controls"><button onClick={() => zoom(-0.15)} aria-label="缩小" disabled={overview || scale <= 0.35}><Icon name="minus" size={16}/></button><output aria-label="缩放比例">{Math.round(scale * 100)}%</output><button onClick={() => zoom(0.15)} aria-label="放大" disabled={overview || scale >= 1.6}><Icon name="plus" size={16}/></button><button onClick={fit} title="适应窗口" aria-label="适应窗口" disabled={overview}><Icon name="fit" size={16}/></button></div></div>
+    <div className="map-footer"><span><i className="legend-dot"/>{readOnly ? '浏览基准' : '当前位置'} <i className="legend-ring"/>正在预览<span className="map-heading-note"> · 拖动空白平移，↑ ↓ 选择节点</span></span><div className="zoom-controls"><button onClick={() => zoom(-0.15)} aria-label="缩小" disabled={overview || scale <= 0.35}><Icon name="minus" size={16}/></button><output aria-label="缩放比例">{Math.round(scale * 100)}%</output><button onClick={() => zoom(0.15)} aria-label="放大" disabled={overview || scale >= 1.6}><Icon name="plus" size={16}/></button><button onClick={fit} title="适应窗口" aria-label="适应窗口" disabled={overview}><Icon name="fit" size={16}/></button></div></div>
   </section>
 }

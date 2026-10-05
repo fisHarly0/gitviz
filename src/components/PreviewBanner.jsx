@@ -9,7 +9,7 @@ export default function PreviewBanner({ viewingOid, currentBranch, onReturn, rea
         正在查看存档 <code>{short}</code>。{readOnly ? 'GitHub 历史只读。' : '工作文件未切换；编辑前会确认创建并切换到试验分支。'}
       </span>
       <button className="return-btn" onClick={onReturn}>
-        返回实际位置{currentBranch ? `（${currentBranch}）` : '（游离 HEAD）'}
+        {readOnly ? '返回远程分支顶端' : '返回实际位置'}{currentBranch ? `（${currentBranch}）` : readOnly ? '' : '（游离 HEAD）'}
       </button>
     </div>
   )

@@ -6,7 +6,7 @@ import useHistoryPaging from '../version-tree/useHistoryPaging.js'
 import '../version-tree/version-tree.css'
 import './desktop-history.css'
 
-const LegacyCommitGraph = lazy(() => import('./LegacyCommitGraph.jsx'))
+const GithubHistory = lazy(() => import('./GithubHistory.jsx'))
 
 function LocalHistory({ adapter, onSelect, selectedOid, refreshKey, onSnapshot, editing, blocked }) {
   const [snapshot, setSnapshot] = useState(null), [error, setError] = useState('')
@@ -32,5 +32,5 @@ function LocalHistory({ adapter, onSelect, selectedOid, refreshKey, onSnapshot, 
 }
 
 export default function CommitGraph(props) {
-  return props.adapter.historyRequest ? <LocalHistory key={props.adapter.historyId} {...props}/> : <Suspense fallback={<p className="loading">正在展开历史…</p>}><LegacyCommitGraph {...props}/></Suspense>
+  return props.adapter.historyRequest ? <LocalHistory key={props.adapter.historyId} {...props}/> : <Suspense fallback={<p className="loading">正在展开历史…</p>}><GithubHistory key={`${props.adapter.spec.owner}/${props.adapter.spec.repo}`} {...props}/></Suspense>
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openRepo, createTauriAdapter } from '../adapters/tauriAdapter.js'
+import { githubErrorMessage } from '../adapters/githubHistory.js'
 import {
   createGithubAdapter,
   loadPAT,
@@ -67,18 +68,12 @@ export default function RepoLoader({ onLoaded, desktop, confirm, run }) {
       })
       const branches = await adapter.listBranches()
       if (branches.length === 0) {
-        throw new Error('这个仓库还没有分支。先向 GitHub 推送一次提交，再重新打开。')
+        throw Object.assign(new Error('这个仓库还没有分支。先向 GitHub 推送一次提交，再重新打开。'), { code: 'EMPTY_REPO' })
       }
       savePAT(token)
       onLoaded(adapter)
     } catch (err) {
-      const messages = {
-        401: 'GitHub 未接受这个令牌。请更新令牌；公开仓库也可以清空令牌后重试。',
-        403: 'GitHub 拒绝访问或请求额度已用完。请检查令牌权限，或稍后重试。',
-        404: '仓库不存在或没有访问权限。请检查所有者/仓库名；私有仓库需要有读取权限的令牌。',
-        429: 'GitHub 请求过于频繁。请稍后重试。',
-      }
-      setError(messages[err.status] || err.message || '无法连接 GitHub。请检查网络后重试。')
+      setError(githubErrorMessage(err))
     } finally {
       setBusy(false)
     }

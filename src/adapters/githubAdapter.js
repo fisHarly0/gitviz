@@ -24,7 +24,7 @@ export function loadPAT() {
 export function parseRepoSpec(input) {
   const trimmed = input.trim().replace(/\/$/, '').replace(/\.git$/, '')
   const m = trimmed.match(/^(?:https?:\/\/github\.com\/)?([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9_.-]+)$/i)
-  if (!m || /^\.+$/.test(m[2])) throw new Error('请输入所有者/仓库名或 GitHub 仓库网址，例如 fisHarly0/gitviz。')
+  if (!m || /^\.+$/.test(m[2])) throw Object.assign(new Error('请输入所有者/仓库名或 GitHub 仓库网址，例如 fisHarly0/gitviz。'), { code: 'INVALID_REPO' })
   return { owner: m[1], repo: m[2] }
 }
 
@@ -56,25 +56,25 @@ export function createGithubAdapter({ owner, repo, token }) {
     kind: () => ADAPTER_KIND.GITHUB,
     spec: { owner, repo },
 
-    async listBranches() {
-      const res = await octokit.repos.listBranches({ owner, repo, per_page: 100 })
+    async listBranches({ signal } = {}) {
+      const res = await octokit.repos.listBranches({ owner, repo, per_page: 100, request: { signal } })
       return res.data.map((b) => ({ name: b.name, oid: b.commit.sha }))
     },
 
-    async listTags() {
-      const res = await octokit.repos.listTags({ owner, repo, per_page: 100 })
+    async listTags({ signal } = {}) {
+      const res = await octokit.repos.listTags({ owner, repo, per_page: 100, request: { signal } })
       return res.data.map((t) => ({ name: t.name, oid: t.commit.sha }))
     },
 
-    async listCommits({ ref, depth = 100 } = {}) {
-      const opts = { owner, repo, per_page: Math.min(depth, 100) }
+    async listCommits({ ref, depth = 100, signal } = {}) {
+      const opts = { owner, repo, per_page: Math.min(depth, 100), request: { signal } }
       if (ref) opts.sha = ref
       const res = await octokit.repos.listCommits(opts)
       return res.data.map(mapCommit)
     },
 
-    async getCommitDetail(oid) {
-      const res = await octokit.repos.getCommit({ owner, repo, ref: oid })
+    async getCommitDetail(oid, { signal } = {}) {
+      const res = await octokit.repos.getCommit({ owner, repo, ref: oid, per_page: 100, request: { signal } })
       const c = res.data
       const files = (c.files || []).map((f) => ({
         path: f.filename,
@@ -87,10 +87,9 @@ export function createGithubAdapter({ owner, repo, token }) {
                 ? 'rename'
                 : 'modify',
         patch: f.patch || '',
-        oldText: '',
-        newText: '',
       }))
-      return { commit: mapCommit(c), files }
+      return { commit: mapCommit(c), files, filesPartial: /rel="next"/.test(res.headers.link || ''),
+        url: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commit/${encodeURIComponent(c.sha)}` }
     },
 
     async getFileHistory(path) {

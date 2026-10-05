@@ -21,7 +21,7 @@ export default function ModeStatusBar({
       <>
         <span className="tag browse">浏览</span>
         <span>
-          {headOid ? <>实际位置 <code>{currentBranch || '游离 HEAD'}</code> · HEAD <code>{short(headOid)}</code></> : '尚无可显示的 HEAD'}
+          {headOid ? <>{readOnly ? '远程浏览基准' : '实际位置'} <code>{currentBranch || '游离 HEAD'}</code> · {readOnly ? '' : 'HEAD '}<code>{short(headOid)}</code></> : readOnly ? '正在读取远程分支' : '尚无可显示的 HEAD'}
         </span>
       </>
     )
@@ -31,7 +31,7 @@ export default function ModeStatusBar({
       <>
         <span className="tag preview">预览</span>
         <span>
-          查看 <code>{short(viewingOid)}</code> · 实际 HEAD <code>{short(headOid)}</code> ·{' '}
+          查看 <code>{short(viewingOid)}</code> · {readOnly ? '浏览基准' : '实际 HEAD'} <code>{short(headOid)}</code> ·{' '}
           {readOnly ? 'GitHub 只读' : '工作文件未切换'}
         </span>
       </>

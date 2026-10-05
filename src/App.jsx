@@ -88,39 +88,6 @@ export default function App() {
     }
   }, [desktop, session.editingFile, operation.busy, openLocalPath])
 
-  // 拉 branches 列表 + 选 main · adapter 切换 OR 用户 commit 后都要重拉
-  useEffect(() => {
-    if (!adapter || adapter.historyRequest) return
-    let cancelled = false
-    Promise.all([
-      adapter.listBranches(),
-      typeof adapter.currentBranch === 'function' ? adapter.currentBranch() : null,
-    ])
-      .then(([refs, currentBranch]) => {
-        if (cancelled) return
-        setBranches(refs)
-        const names = refs.map((r) => r.name)
-        const main = names.includes('main')
-          ? 'main'
-          : names.includes('master')
-            ? 'master'
-            : names[0] || 'main'
-        const initialBranch = names.includes(currentBranch) ? currentBranch : main
-        const initialRef = refs.find((r) => r.name === initialBranch)
-        // 首次加载（refreshKey === 0）才 setupRepo · 后续 commit 触发的 refresh 不应 reset session
-        if (refreshKey === 0) {
-          session.setupRepo(names, initialRef ? initialRef.oid : null, initialBranch)
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setDropError(err.message || String(err))
-      })
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adapter, refreshKey])
-
   // commit 完触发：更新 refreshKey 让 graph + branches 重拉
   const handleCommitted = () => {
     setRefreshKey((k) => k + 1)
@@ -208,12 +175,19 @@ export default function App() {
             editing={Boolean(session.editingFile) || blocked}
             dirty={Boolean(repoSnapshot?.dirty)}
             onRefresh={handleCommitted}
-            onSwitched={(name, oid) => { session.switchToBranch(name, oid); handleCommitted() }}
+            onSwitched={(name, oid) => { session.switchToBranch(name, oid); if (adapter.kind() === 'local') handleCommitted() }}
           />
           <CommitGraph
             adapter={adapter}
             onSelect={oid => { if (!session.editingFile && !operation.busy) onSelectCommit(oid) }}
             selectedOid={session.viewingOid}
+            currentBranch={session.currentBranch}
+            onRemoteHistory={data => {
+              setBranches(data.branches)
+              const names = data.branches.map(ref => ref.name)
+              const branch = names.includes(session.currentBranch) ? session.currentBranch : names.includes('main') ? 'main' : names.includes('master') ? 'master' : names[0] || ''
+              session.syncSnapshot({ branches: data.branches, branch, head: data.branches.find(ref => ref.name === branch)?.oid || null })
+            }}
             refreshKey={refreshKey}
             editing={Boolean(session.editingFile)}
             blocked={blocked}
