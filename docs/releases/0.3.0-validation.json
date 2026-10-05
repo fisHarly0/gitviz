@@ -1,0 +1,119 @@
+{
+  "run": 37283842186,
+  "platforms": [
+    {
+      "platform": "linux",
+      "source": "51a873c3b4430e8665c7a1b9241c30eae2902a47",
+      "clean": true,
+      "version": "0.3.0",
+      "checksums": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 42711,
+          "sha256": "303f7776abd7d12fd8b99367576bc41ae0b5e7b94807fc40a90a2ce94a40c689"
+        },
+        {
+          "name": "gitviz-0.3.0-linux-X64.tar.gz",
+          "bytes": 4983987,
+          "sha256": "b19f94bca650b44f41909a945bb3a117623e23488942019350993d42432e9b5f"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 100728,
+          "sha256": "edd37e7e9caaf470ae957ad88d2847e45fc9ec160dcf84bae07d83f1ea16a09c"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    },
+    {
+      "platform": "macos",
+      "source": "51a873c3b4430e8665c7a1b9241c30eae2902a47",
+      "clean": true,
+      "version": "0.3.0",
+      "checksums": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 42711,
+          "sha256": "303f7776abd7d12fd8b99367576bc41ae0b5e7b94807fc40a90a2ce94a40c689"
+        },
+        {
+          "name": "gitviz-0.3.0-macos-ARM64.tar.gz",
+          "bytes": 4647616,
+          "sha256": "126dd60d29764906123bafa04d1f8eb4946b06265a685623b3950d88bf6d42f3"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 100728,
+          "sha256": "edd37e7e9caaf470ae957ad88d2847e45fc9ec160dcf84bae07d83f1ea16a09c"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    },
+    {
+      "platform": "windows",
+      "source": "51a873c3b4430e8665c7a1b9241c30eae2902a47",
+      "clean": true,
+      "version": "0.3.0",
+      "checksums": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 42711,
+          "sha256": "303f7776abd7d12fd8b99367576bc41ae0b5e7b94807fc40a90a2ce94a40c689"
+        },
+        {
+          "name": "gitviz_0.3.0_x64-setup.exe",
+          "bytes": 3212651,
+          "sha256": "f54d4dead77c0683aac03485638d34725a2e22d3a6345788b9966c397999f570"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 100728,
+          "sha256": "edd37e7e9caaf470ae957ad88d2847e45fc9ec160dcf84bae07d83f1ea16a09c"
+        },
+        {
+          "name": "gitviz-windows-x64.exe",
+          "bytes": 12966912,
+          "sha256": "9069fc4ea99dd7240f343e5abfd4c656957ec35bd4d451a71c726fa369d332cf"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    }
+  ],
+  "identicalPluginPackages": {
+    "fisharly-gitviz-dsh-0.3.0.tgz": "303f7776abd7d12fd8b99367576bc41ae0b5e7b94807fc40a90a2ce94a40c689",
+    "gitviz-0.3.0.vsix": "edd37e7e9caaf470ae957ad88d2847e45fc9ec160dcf84bae07d83f1ea16a09c"
+  },
+  "installer": {
+    "uninstall": true,
+    "repositoryAndWebViewPreserved": true,
+    "sameVersionReinstall": true,
+    "version": "0.3.0",
+    "crossVersionUpgrade": "not tested",
+    "firstInstall": true
+  },
+  "status": "development-validation-only",
+  "runUrl": "https://github.com/fisHarly0/gitviz/actions/runs/37283842186",
+  "remainingReleaseGates": [
+    "DSH upgrade and final native validation",
+    "desktop 0.2.0 portable to 0.3.0 installer data continuity",
+    "multi-host native concurrency",
+    "first-use UX and missing Git recovery",
+    "Linux/macOS native UI",
+    "final release packages and supported platform declaration"
+  ]
+}
