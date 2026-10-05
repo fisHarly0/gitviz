@@ -1,24 +1,11 @@
-//! Read-only, paged Git history for the shared version map. Writes remain in branch.rs.
+//! Read-only, paged Git history for the shared version map. Writes use operations.rs.
 use crate::SharedRepoState;
 use serde_json::{json, Value};
-use std::{collections::hash_map::DefaultHasher, hash::{Hash, Hasher}, io::{BufRead, BufReader}, path::{Path, PathBuf}, process::{Command, Stdio}};
+use std::{collections::hash_map::DefaultHasher, hash::{Hash, Hasher}, path::{Path, PathBuf}, time::Duration};
 use tauri::State;
 
-fn command(root: &Path) -> Command {
-    let mut command = Command::new("git");
-    command.current_dir(root).args(["--no-optional-locks", "-c", "core.quotepath=false"])
-        .env("GIT_TERMINAL_PROMPT", "0").env("GIT_LITERAL_PATHSPECS", "1");
-    #[cfg(windows)] {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000);
-    }
-    command
-}
-
 fn git(root: &Path, args: &[&str]) -> Result<String, String> {
-    let output = command(root).args(args).output().map_err(|e| format!("无法运行 Git：{e}。请安装 Git 并确保它位于 PATH。"))?;
-    if !output.status.success() { return Err(String::from_utf8_lossy(&output.stderr).trim().to_owned()); }
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    super::git_process::text(root, args, Duration::from_secs(30))
 }
 
 fn state(root: &Path) -> Result<Value, String> {
@@ -117,46 +104,28 @@ pub(crate) fn search(root: &Path, params: &Value) -> Result<Value, String> {
     let count = params["limit"].as_u64().unwrap_or(50).clamp(1, 100) as usize;
     if state["head"].is_null() && state["branches"].as_array().unwrap().is_empty() && state["tags"].as_array().unwrap().is_empty() { return Ok(json!({"commits":[],"revision":revision,"nextCursor":null})); }
     let mut args = vec!["log"]; args.extend(history_args(&state)); args.extend(["-z", "--format=%H%x00%P%x00%an%x00%at%x00%s", "--"]);
-    let mut child = command(root).args(args).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e|e.to_string())?;
-    let stderr = child.stderr.take().unwrap();
-    let errors = std::thread::spawn(move || {
-        use std::io::Read;
-        let mut stream = stderr; let mut kept = Vec::new(); let mut buffer = [0; 4096];
-        while let Ok(count) = stream.read(&mut buffer) {
-            if count == 0 { break; }
-            let remaining = 8192usize.saturating_sub(kept.len());
-            kept.extend_from_slice(&buffer[..count.min(remaining)]);
-        }
-        String::from_utf8_lossy(&kept).into_owned()
-    });
-    let mut reader = BufReader::new(child.stdout.take().unwrap());
     let mut matches = 0u64; let mut found = Vec::new(); let needle = query.trim().to_lowercase();
-    let result = (|| -> Result<(), String> {
-        loop {
-            let mut fields = Vec::new();
-            for _ in 0..5 {
-                let mut raw = Vec::new();
-                if reader.read_until(0, &mut raw).map_err(|e|e.to_string())? == 0 { return Ok(()); }
-                if raw.last() == Some(&0) { raw.pop(); }
-                fields.push(String::from_utf8_lossy(&raw).into_owned());
+    let mut raw = Vec::new(); let mut fields = Vec::new();
+    super::git_process::run(root, &args, Duration::from_secs(30), 32 * 1024 * 1024, Some(&mut |bytes| {
+        for byte in bytes {
+            if *byte != 0 {
+                raw.push(*byte);
+                if raw.len() > 2 * 1024 * 1024 { return Err("单条历史信息过大，无法继续搜索。".into()); }
+                continue;
             }
+            fields.push(String::from_utf8_lossy(&raw).into_owned()); raw.clear();
+            if fields.len() != 5 { continue; }
             let commit = parse_fields(&fields.iter().map(String::as_str).collect::<Vec<_>>());
+            fields.clear();
             let refs = state["branches"].as_array().unwrap().iter().chain(state["tags"].as_array().unwrap()).filter(|r|r["oid"] == commit["oid"]).map(|r|r["name"].as_str().unwrap_or("")).collect::<Vec<_>>().join(" ");
             if format!("{} {} {} {}", commit["oid"].as_str().unwrap(), commit["author"].as_str().unwrap(), commit["message"].as_str().unwrap(), refs).to_lowercase().contains(&needle) {
                 if matches >= skip { found.push(commit); }
                 matches += 1;
-                if found.len() > count { return Ok(()); }
+                if found.len() > count { return Ok(false); }
             }
         }
-    })();
-    let stopped = found.len() > count || result.is_err();
-    // Git for Windows may launch a child process. Close its stdout before killing
-    // the launcher so the child cannot block writing to an unread pipe.
-    drop(reader);
-    if stopped { let _ = child.kill(); }
-    let status = child.wait().map_err(|e|e.to_string())?;
-    let stderr = errors.join().unwrap_or_default(); result?;
-    if !status.success() && !stopped { return Err(format!("读取历史失败：{stderr}")); }
+        Ok(true)
+    })).map_err(|failure|super::git_process::describe(root, failure))?;
     assert_revision(root, revision)?;
     let next = if found.len() > count {json!({"revision":revision,"query":query,"offset":skip+count as u64})} else {Value::Null};
     found.truncate(count);

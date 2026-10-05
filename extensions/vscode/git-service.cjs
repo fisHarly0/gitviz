@@ -1,10 +1,9 @@
-const { execFile, spawn } = require('node:child_process')
-const { promisify } = require('node:util')
+const { runGitProcess } = require('./git-process.cjs')
+const { StringDecoder } = require('node:string_decoder')
 const fs = require('node:fs/promises')
 const path = require('node:path')
 const { randomUUID, createHash } = require('node:crypto')
 const { OperationJournal } = require('./operation-journal.cjs')
-const run = promisify(execFile)
 const OID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/
 
 class GitService {
@@ -12,13 +11,13 @@ class GitService {
 
   async command(args, options = {}) {
     try {
-      const result = await run(this.git, ['--no-optional-locks', '-c', 'core.quotepath=false', ...args], {
-        cwd: this.root, windowsHide: true, timeout: 30000, maxBuffer: 32 * 1024 * 1024,
+      return await runGitProcess(this.git, ['--no-optional-locks', '-c', 'core.quotepath=false', ...args], {
+        cwd: this.root, timeout: 30000, maxBuffer: 32 * 1024 * 1024,
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_LITERAL_PATHSPECS: '1' }, ...options,
       })
-      return result.stdout
     } catch (error) {
-      throw new Error(String(error.stderr || error.message).trim(), { cause: error })
+      if (error.code === 'GIT_PROCESS_UNCERTAIN') this.processUncertain = true
+      throw error
     }
   }
 
@@ -110,29 +109,23 @@ class GitService {
     if (!Number.isSafeInteger(skip) || skip < 0 || (cursor && (cursor.revision !== revision || cursor.query !== query))) throw new Error('搜索分页已失效。')
     const needle = query.trim().toLowerCase(), refs = new Map()
     for (const ref of [...state.branches, ...state.tags]) refs.set(ref.oid, `${refs.get(ref.oid) || ''} ${ref.name}`)
-    const commits = await new Promise((resolve, reject) => {
-      if (!state.head && !state.branches.length && !state.tags.length) { resolve([]); return }
-      const child = spawn(this.git, ['--no-optional-locks', 'log', ...this.historyArgs(state), '-z', '--format=%H%x00%P%x00%an%x00%at%x00%s', '--'], { cwd: this.root, windowsHide: true, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } })
-      let buffer = '', fields = [], matched = 0, stopped = false, stderr = ''
-      const found = []
-      const timer = setTimeout(() => { child.kill(); reject(new Error('搜索耗时过长，请缩小查询或稍后重试。')) }, 30000)
-      child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8')
-      child.stderr.on('data', data => { stderr = (stderr + data).slice(-4096) })
-      child.stdout.on('data', data => {
-        if (stopped) return
-        buffer += data
+    const commits = []
+    if (state.head || state.branches.length || state.tags.length) {
+      let buffer = '', fields = [], matched = 0
+      const decoder = new StringDecoder('utf8')
+      await this.command(['log', ...this.historyArgs(state), '-z', '--format=%H%x00%P%x00%an%x00%at%x00%s', '--'], { onStdout: data => {
+        buffer += decoder.write(data)
+        if (buffer.length > 2 * 1024 * 1024) throw new Error('单条历史信息过大，无法继续搜索。')
         let end
         while ((end = buffer.indexOf('\0')) >= 0) {
           fields.push(buffer.slice(0, end)); buffer = buffer.slice(end + 1)
           if (fields.length !== 5) continue
           const [commit] = this.parseHistory(fields.join('\0') + '\0'); fields = []
-          if (commit && `${commit.oid} ${commit.author} ${commit.message} ${refs.get(commit.oid) || ''}`.toLowerCase().includes(needle) && matched++ >= skip) found.push(commit)
-          if (found.length > count) { stopped = true; child.kill(); break }
+          if (commit && `${commit.oid} ${commit.author} ${commit.message} ${refs.get(commit.oid) || ''}`.toLowerCase().includes(needle) && matched++ >= skip) commits.push(commit)
+          if (commits.length > count) return false
         }
-      })
-      child.on('error', error => { clearTimeout(timer); reject(error) })
-      child.on('close', code => { clearTimeout(timer); if (code && !stopped) reject(new Error(stderr || '读取历史失败。')); else resolve(found) })
-    })
+      } })
+    }
     await this.assertHistory(revision)
     return { commits: commits.slice(0, count), revision, nextCursor: commits.length > count ? { revision, query, offset: skip + count } : null }
   }
@@ -184,6 +177,7 @@ class GitService {
   }
 
   async exclusive(action) {
+    if (this.processUncertain) throw new Error('上次 Git 进程状态尚未确认，本会话不能继续写入。请先检查进程、Git 状态和保留的操作锁。')
     if (this.busy) throw new Error('另一个 Git 操作正在进行，请稍后重试。')
     this.busy = true
     let lock, file
@@ -192,7 +186,7 @@ class GitService {
       lock = await fs.open(file, 'wx').catch(error => { if (error.code === 'EEXIST') throw new Error('另一个 Gitviz 写操作正在进行；若上次异常退出，请先检查 Git 状态与操作记录。'); throw error })
       await lock.writeFile(String(process.pid))
       return await action()
-    } finally { try { if (lock) { await lock.close(); await fs.unlink(file) } } finally { this.busy = false } }
+    } finally { try { if (lock) { await lock.close(); if (!this.processUncertain) await fs.unlink(file) } } finally { this.busy = false } }
   }
 
   async operations(params) { return this.journal.list(params) }

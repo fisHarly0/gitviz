@@ -14,7 +14,7 @@
     "build": "vite build",
     "extension:build": "vite build --config vite.extension.config.js",
     "extension:package": "npm run extension:build && node scripts/package-extension.mjs",
-    "extension:test": "node --test tests/version-tree.test.js tests/git-service.test.cjs",
+    "extension:test": "node --test tests/version-tree.test.js tests/git-service.test.cjs tests/git-process.test.cjs",
     "dsh:build": "vite build --config vite.dsh.config.js",
     "dsh:package": "npm run dsh:build && node scripts/package-dsh.mjs",
     "dsh:test": "node --test tests/dsh-host.test.mjs",

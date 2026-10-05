@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const extension = path.join(root, 'extensions/vscode')
 const manifest = JSON.parse(await fs.readFile(path.join(extension, 'package.json'), 'utf8'))
 const zip = new JSZip()
-const files = ['package.json', 'extension.cjs', 'git-service.cjs', 'operation-journal.cjs', 'README.md', 'media/tree.js', 'media/tree.css']
+const files = ['package.json', 'extension.cjs', 'git-service.cjs', 'git-process.cjs', 'operation-journal.cjs', 'README.md', 'media/tree.js', 'media/tree.css']
 for (const file of files) zip.file(`extension/${file}`, await fs.readFile(path.join(extension, file)))
 const notices = []
 for (const name of ['react', 'react-dom', 'scheduler']) {

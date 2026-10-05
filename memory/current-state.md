@@ -2,9 +2,9 @@
 
 更新时间：2026-10-05
 
-最新批次：共有操作确认已对齐（基线 aa0d098）。VS Code 与 DSH 共用结构化预览和只读影响检查，显示仓库、完整起点/目标、目录和文件数量；VS Code 建分支/worktree 新增最终确认；准备前后和执行 guard 拒绝历史引用变化，桌面也修正了 revision 采集顺序。26 项 Node/布局用例（原 22 + 新增 4）、6 项 DSH 接口用例及两种插件实装确认/恢复流程通过。当前接续见 `memory/handoff-2026-10-05-confirmation-parity.md`；下一批处理异常 Git 进程/超时与剩余预检边界。完整公开交付目标保持未完成。
+最新批次：Git CLI 生命周期收尾（基线 30a47a0）。三端超时、输出超限和搜索提前结束使用受控执行器；等待本次进程树清理及输出关闭，无法确认停止时暂停写入并保留已持有的操作锁。Windows 真实 hook 派生进程、保留现场/继续提交、父进程退出后悬挂输出测试通过；VSIX/DSH 打包后的模块也各通过 4 项进程测试。30 项 Node/布局、20 项前端、6 项 DSH 接口、4 项大历史测试通过。当前接续见 `memory/handoff-2026-10-05-git-process-lifecycle.md`；完整公开交付目标保持未完成。
 
-本批 Rust 操作回归 10/10、`cargo check --release` 通过。桌面 UI 未改，exe 未重新打包；当前源代码的 revision 修正由真实 Git 测试验证，使用新桌面代码需重新构建。
+本批 Rust 全量回归 13/13，加测 Windows 悬挂管道 1/1、输出上限 1/1；`cargo check --release` 与桌面 release 构建通过。三端开发包和 SHA-256 在 `F:/Codex/work/gitviz-product/process-packages/`，旧 artifacts 不变。进程机制在 Windows 实测，Unix 实现尚未运行；本批没有重复三端原生 UI 冒烟，前批实装确认见 `memory/handoff-2026-10-05-confirmation-parity.md`。
 
 ## 当前目标：公开产品交付
 

@@ -4,6 +4,7 @@ pub mod repo;
 pub mod history;
 pub mod operations;
 pub mod journal;
+pub mod git_process;
 
 use crate::SharedRepoState;
 use std::path::PathBuf;

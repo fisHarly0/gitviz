@@ -3,7 +3,8 @@
 use crate::SharedRepoState;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{collections::HashMap, fs, io::{Read, Write}, path::{Component, Path, PathBuf}, process::{Command, Stdio}, sync::{Arc, Mutex}, time::{Duration, Instant}};
+use std::{collections::HashMap, fs, io::Write, path::{Component, Path, PathBuf}, sync::{Arc, Mutex}, time::{Duration, Instant}};
+#[cfg(test)] use std::process::Command;
 use tauri::State;
 use super::journal;
 
@@ -32,40 +33,8 @@ pub(super) fn nonce() -> Result<String, String> {
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
 
-fn command(root: &Path) -> Command {
-    let mut cmd = Command::new("git");
-    cmd.current_dir(root).args(["--no-optional-locks", "-c", "core.quotepath=false"])
-        .env("GIT_TERMINAL_PROMPT", "0").env("GIT_LITERAL_PATHSPECS", "1");
-    #[cfg(windows)] { use std::os::windows::process::CommandExt; cmd.creation_flags(0x08000000); }
-    cmd
-}
-
 pub(crate) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
-    let mut child = command(root).args(args).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e| format!("无法运行 Git：{e}"))?;
-    // Drain both streams, retaining bounded diagnostic output. Hooks can be noisy.
-    fn drain(mut stream: impl Read) -> Vec<u8> {
-        let mut out = Vec::new(); let mut buf = [0u8; 8192];
-        while let Ok(n) = stream.read(&mut buf) { if n == 0 { break; } let keep = n.min((8 * 1024 * 1024usize).saturating_sub(out.len())); out.extend_from_slice(&buf[..keep]); }
-        out
-    }
-    let stdout = child.stdout.take().unwrap(); let stderr = child.stderr.take().unwrap();
-    let output = std::thread::spawn(move || drain(stdout)); let errors = std::thread::spawn(move || drain(stderr));
-    let started = Instant::now();
-    let status = loop {
-        if let Some(status) = child.try_wait().map_err(|e|e.to_string())? { break status; }
-        if started.elapsed() > Duration::from_secs(120) {
-            #[cfg(windows)] {
-                use std::os::windows::process::CommandExt;
-                let _ = Command::new("taskkill").args(["/PID", &child.id().to_string(), "/T", "/F"]).creation_flags(0x08000000).output();
-            }
-            let _ = child.kill(); let _ = child.wait();
-            return Err("Git 操作超过 120 秒。请检查 Git 状态；已经产生的更改会保留。".into());
-        }
-        std::thread::sleep(Duration::from_millis(10));
-    };
-    let out = output.join().unwrap_or_default(); let err = errors.join().unwrap_or_default();
-    if !status.success() { return Err(String::from_utf8_lossy(&err).trim().to_owned()); }
-    Ok(String::from_utf8_lossy(&out).into_owned())
+    super::git_process::text(root, args, Duration::from_secs(120))
 }
 
 fn canonical(root: &Path) -> Result<PathBuf, String> { fs::canonicalize(root).map_err(|e|e.to_string()) }
@@ -212,12 +181,13 @@ fn validate(root: &Path, expected: &Expected, action: &Action) -> Result<Value, 
     Ok(preview)
 }
 
-struct OperationLock(PathBuf);
-impl Drop for OperationLock { fn drop(&mut self) { let _ = fs::remove_file(&self.0); } }
+struct OperationLock { file: PathBuf, root: PathBuf }
+impl Drop for OperationLock { fn drop(&mut self) { if !super::git_process::is_uncertain(&self.root) { let _ = fs::remove_file(&self.file); } } }
 fn lock_repo(root: &Path) -> Result<OperationLock, String> {
+    if super::git_process::is_uncertain(root) { return Err("上次 Git 进程状态尚未确认，本会话不能继续写入。请检查进程、Git 状态和保留的操作锁。".into()); }
     let path = root.join(git(root, &["rev-parse", "--git-path", "gitviz-operation.lock"])?.trim());
     let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&path).map_err(|_| "另一个 Gitviz 写操作正在进行。如果上次异常退出，请检查 Git 状态后删除 .git/gitviz-operation.lock。".to_owned())?;
-    write!(file, "{}", std::process::id()).map_err(|e|e.to_string())?; Ok(OperationLock(path))
+    write!(file, "{}", std::process::id()).map_err(|e|e.to_string())?; Ok(OperationLock { file: path, root: root.to_path_buf() })
 }
 
 fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint: Option<&Value>) -> Result<Value, String> {
@@ -448,6 +418,71 @@ mod tests {
         assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "second\n");
         assert!(git(&f.root, &["status", "--porcelain"]).unwrap().is_empty());
         assert!(!f.root.join(".git/gitviz/operations").exists());
+    }
+    #[test]
+    fn bounded_git_timeout_stops_real_hook_children_and_keeps_staged_files() {
+        let f = Fixture::new();
+        let helper = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("tests/helpers/slow-git-hook.cjs");
+        let quoted = helper.to_string_lossy().replace('\\', "/").replace('\'', "'\\''");
+        fs::write(f.root.join(".git/hooks/pre-commit"), format!("#!/bin/sh\nexec node '{quoted}' parent\n")).unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(f.root.join(".git/hooks/pre-commit"),fs::Permissions::from_mode(0o755)).unwrap(); }
+        fs::write(f.root.join("中文.txt"), "timeout edit\n").unwrap();
+        git(&f.root, &["add", "--", "中文.txt"]).unwrap();
+        let failure = super::super::git_process::run(&f.root, &["commit", "-m", "slow hook"], Duration::from_secs(5), 1024 * 1024, None).unwrap_err();
+        assert!(!failure.uncertain, "{}", failure.message); assert!(failure.message.contains("超过 5 秒"));
+        for name in ["parent", "child"] {
+            let pid = fs::read_to_string(f.root.join(format!(".git/process-{name}.pid"))).unwrap();
+            let mut check = Command::new("node");
+            check.args(["-e", "try { process.kill(Number(process.argv[1]),0); process.exit(1) } catch(e) { process.exit(e.code === 'ESRCH' ? 0 : 2) }", pid.trim()]);
+            #[cfg(windows)] { use std::os::windows::process::CommandExt; check.creation_flags(0x08000000); }
+            assert!(check.status().unwrap().success(), "hook {name} survived timeout");
+            let file = f.root.join(format!(".git/process-{name}.heartbeat")); let before = fs::read(&file).unwrap();
+            std::thread::sleep(Duration::from_millis(300)); assert_eq!(fs::read(&file).unwrap(), before);
+        }
+        assert_eq!(head(&f.root).unwrap(), f.latest);
+        assert_eq!(git(&f.root, &["show", ":中文.txt"]).unwrap(), "timeout edit\n");
+        fs::remove_file(f.root.join(".git/hooks/pre-commit")).unwrap();
+        git(&f.root, &["commit", "-m", "after timeout"]).unwrap();
+        assert_eq!(git(&f.root, &["rev-parse", "HEAD^"]).unwrap().trim(), f.latest);
+    }
+    #[test]
+    fn git_output_limit_rejects_partial_history_instead_of_returning_success() {
+        let f = Fixture::new();
+        let failure = super::super::git_process::run(&f.root, &["log", "-1", "--format=%H"], Duration::from_secs(5), 4, None).unwrap_err();
+        assert!(!failure.uncertain, "{}", failure.message);
+        assert!(failure.message.contains("超过大小限制"));
+        assert_eq!(head(&f.root).unwrap(), f.latest);
+    }
+    #[test]
+    fn uncertain_git_process_preserves_lock_and_blocks_another_write() {
+        let f = Fixture::new();
+        let lock = lock_repo(&f.root).unwrap();
+        let message = super::super::git_process::describe(&f.root, super::super::git_process::ProcessError { message: "injected cleanup failure".into(), uncertain: true });
+        assert!(message.contains("无法确认")); drop(lock);
+        assert!(f.root.join(".git/gitviz-operation.lock").exists());
+        assert!(lock_repo(&f.root).is_err());
+        assert_eq!(head(&f.root).unwrap(), f.latest);
+    }
+    #[cfg(windows)]
+    #[test]
+    fn exited_git_parent_with_open_pipe_returns_bounded_uncertainty() {
+        use std::os::windows::process::CommandExt;
+        let f = Fixture::new();
+        let helper = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("tests/helpers/slow-git-hook.cjs");
+        let quoted = helper.to_string_lossy().replace('\\', "/").replace('\'', "'\\''");
+        let alias = format!("alias.hold=!node '{quoted}' pipe-child &");
+        let started = Instant::now();
+        let result = super::super::git_process::run(&f.root, &["-c", &alias, "hold"], Duration::from_millis(1500), 1024 * 1024, None);
+        let elapsed = started.elapsed();
+        // Clean up the exact fixture child before assertions, including on failure.
+        let pid = fs::read_to_string(f.root.join(".git/process-pipe-child.pid")).unwrap();
+        let system = std::env::var_os("SystemRoot").map(PathBuf::from).unwrap_or_else(||PathBuf::from("C:/Windows"));
+        let cleanup = Command::new(system.join("System32/taskkill.exe")).args(["/PID", pid.trim(), "/T", "/F"])
+            .creation_flags(0x08000000).output().unwrap();
+        assert!(cleanup.status.success(), "fixture child should still be alive until explicitly cleaned up");
+        let failure = result.unwrap_err();
+        assert!(failure.uncertain, "{}", failure.message);
+        assert!(elapsed < Duration::from_secs(10), "pipe drainage must be bounded: {elapsed:?}");
     }
     #[test]
     fn unsafe_paths_and_git_metadata_are_rejected_and_hardlink_target_is_untouched() {
