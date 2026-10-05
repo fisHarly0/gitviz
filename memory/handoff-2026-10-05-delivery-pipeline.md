@@ -10,4 +10,6 @@ F:/gitviz，main，基线 51cb87e。用户持续授权公开产品完善及提�
 
 CI 地址：https://github.com/fisHarly0/gitviz/actions/runs/37281063992 。Linux job 111669019958，Windows job 111669020077（已失败终态），macOS job 111669020274。后续先检查这些具体任务和本机 80835，不因等待时间较长重启构建。旧 CI 结束后推送后续修正并跟踪新 run；新版 Windows 原生包尚未得到证据。
 
+继续核实：上述 run 已完成，Linux/macOS 全流程成功并上传产物；Linux 下载后所有文件及 manifest SHA、插件内容校验通过，source=95d6d9c、dirty=false。本机 80835 已结束 exit0，Rust 25/25（包含全部大历史fixture）。后续修正 e969ffe 已提交；补充 Unix tar 包以保留可执行权限，再一起推送。当前本机 NSIS 构建执行会话 45036，日志 `delivery-nsis-build.log`，工具缓存 `src-tauri/target/.tauri/` 在 F 盘。此行取代上方仍活跃的旧状态。
+
 暂存与产物：F:/Codex/work/gitviz-product/delivery-*；npm/Cargo 缓存均在 F:/dev/cache。正式 Release、安装升级验收、签名公证、三端原生最终包验收、P1 多宿主并发和 P2 首次使用仍未完成。完整公开产品目标保持 active。

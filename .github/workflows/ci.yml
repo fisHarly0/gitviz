@@ -109,7 +109,10 @@ jobs:
             if (!(Get-ChildItem -LiteralPath $env:GITVIZ_ARTIFACTS_DIR -Filter '*-setup.exe')) { throw 'Missing NSIS installer' }
           } else {
             $target = if ($IsMacOS) { 'macos' } else { 'linux' }
-            Copy-Item -LiteralPath 'src-tauri/target/release/gitviz' -Destination "$env:GITVIZ_ARTIFACTS_DIR/gitviz-$target-${{ runner.arch }}"
+            $version = (Get-Content -Raw 'package.json' | ConvertFrom-Json).version
+            # Preserve executable permission inside tar; the outer Actions ZIP uses 644.
+            tar -czf "$env:GITVIZ_ARTIFACTS_DIR/gitviz-$version-$target-${{ runner.arch }}.tar.gz" -C src-tauri/target/release gitviz -C $env:GITHUB_WORKSPACE LICENSE
+            if ($LASTEXITCODE -ne 0) { throw 'Native archive creation failed' }
           }
       - name: Source identity and checksums
         run: npm run artifacts:manifest

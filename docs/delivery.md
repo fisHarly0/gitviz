@@ -37,6 +37,8 @@ NSIS 输出在 `src-tauri/target/release/bundle/nsis/`；免安装程序在 `src
 
 `build-manifest.json` 记录源提交、工作树是否修改、平台、Node/Rust 及每个产物的大小和 SHA-256；`SHA256SUMS.txt` 也覆盖 manifest 本身。工作树 dirty 的产物不能冒充该提交的干净发行。
 
+Linux/macOS 验证程序放在含许可证的 `.tar.gz` 内，避免 Actions 外层 ZIP 丢失可执行权限。下载后在对应系统用 `tar -xzf <文件名>` 解包；这些构建仍需匹配系统运行库，尚未作为正式支持平台的安装包发行。Windows NSIS 内包含许可证，验证产物目录也附独立许可证。
+
 VSIX 使用固定 ZIP 时间和权限；两个插件包对相同文件输入重复打包的 SHA 必须一致。`.gitattributes` 固定文本 checkout 换行。不同系统的原生程序、签名、平台 SDK 和编译工具链会影响二进制，本项目不声称原生跨系统逐字节可复现。
 
 ## 正式发布前
