@@ -99,6 +99,14 @@ jobs:
       - name: Windows NSIS installer
         if: runner.os == 'Windows'
         run: npm run desktop:bundle -- --ci --bundles nsis
+      - name: Windows installed native application
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem -LiteralPath 'src-tauri/target/release/bundle/nsis' -Filter '*-setup.exe')
+          if ($installer.Count -ne 1) { throw 'Expected exactly one NSIS installer' }
+          ./scripts/test-windows-installer.ps1 -Installer $installer[0].FullName -TestRoot "$env:RUNNER_TEMP/gitviz-install-smoke"
       - name: Collect native artifacts
         shell: pwsh
         run: |
@@ -121,4 +129,14 @@ jobs:
           name: gitviz-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
           path: ${{ env.GITVIZ_ARTIFACTS_DIR }}
           if-no-files-found: error
+          retention-days: 14
+      - name: Installed application evidence
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gitviz-install-evidence-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/gitviz-install-smoke/*.json
+            ${{ runner.temp }}/gitviz-install-smoke/*.png
+          if-no-files-found: ignore
           retention-days: 14

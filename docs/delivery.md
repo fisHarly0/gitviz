@@ -10,12 +10,12 @@
 2. 前端、真实 Git 操作/进程/宿主生命周期、DSH、大历史测试。
 3. 三个前端构建；插件打包、完整性检查和重复构建校验。
 4. Rust `check --locked --all-targets` 与真实 Git 测试，消费同一 job 生成的 2000/5000/10000 提交仓库。
-5. 原生程序构建；Windows 另打包 NSIS 安装程序。
+5. 原生程序构建；Windows 另打包 NSIS 安装程序，并测试首次安装、真实 WebView/Git 浏览、同版本重装和卸载。
 6. 生成源提交/版本/工具链记录、SHA-256 清单，保存 14 天的 CI artifacts。
 
 任何步骤失败均阻止后续产物上传。原生测试串行运行，Git 超时测试不会跳过；CI 缺少 Rust 大历史 fixture 会失败。测试只使用 runner 临时目录，和开发者本机的 F 盘约定相互独立。
 
-这份工作流不包含可视化宿主、干净系统安装、升级、签名或公证测试。Linux/macOS 的程序编译与后端测试也不能证明其原生 UI 已验收。真实运行结果以 [Actions](https://github.com/fisHarly0/gitviz/actions/workflows/ci.yml) 对应提交为准。
+Windows 安装冒烟使用全新的临时目录与 WebView 数据，截图和结果单独保存为 `gitviz-install-evidence-*`。它会拒绝覆盖已有 Gitviz 安装，并核对浏览没有修改仓库；同版本重装不等于跨版本升级。这份工作流尚不包含 VS Code/DSH 可视化宿主、跨版本升级、签名或公证测试。Linux/macOS 的程序编译与后端测试也不能证明其原生 UI 已验收。真实运行结果以 [Actions](https://github.com/fisHarly0/gitviz/actions/workflows/ci.yml) 对应提交为准。
 
 ## 版本与本机产物
 
@@ -34,6 +34,8 @@ npm run desktop:bundle -- --ci --bundles nsis
 ```
 
 NSIS 输出在 `src-tauri/target/release/bundle/nsis/`；免安装程序在 `src-tauri/target/release/gitviz.exe`。`useLocalToolsDir` 让打包工具缓存在项目的 `target/.tauri/`，避免本机默默写到 C 盘。将选定原生产物复制到 `GITVIZ_ARTIFACTS_DIR` 后运行 `npm run artifacts:manifest`。
+
+本机 Windows 安装验证使用 PowerShell 7 与 Node 24：`./scripts/test-windows-installer.ps1 -Installer <安装包绝对路径> -TestRoot <尚不存在的绝对测试目录>`。脚本安装后启动原生程序，读取合成仓库，验证重装保留 WebView 数据，最后卸载并保留测试证据。2026-10-05 的本机 0.3.0 NSIS 已通过这些步骤；这不替代下一轮 Windows CI 或旧版本升级结果。
 
 `build-manifest.json` 记录源提交、工作树是否修改、平台、Node/Rust 及每个产物的大小和 SHA-256；`SHA256SUMS.txt` 也覆盖 manifest 本身。工作树 dirty 的产物不能冒充该提交的干净发行。
 

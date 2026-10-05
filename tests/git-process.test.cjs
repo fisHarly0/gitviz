@@ -35,9 +35,14 @@ test('output, binary data, nonzero exit and missing executable are classified wi
 
 test('timed-out real restore kills hook descendants, retains checkpoint and can resume after fixing the hook', async () => {
   const f = await fixture(), original = f.git.command.bind(f.git)
-  f.git.command = (args, options) => original(args, args[0] === 'commit' ? { ...options, timeout: 5000 } : options)
+  let commitFailure
+  f.git.command = async (args, options) => {
+    try { return await original(args, args[0] === 'commit' ? { ...options, timeout: 5000 } : options) }
+    catch (error) { if (args[0] === 'commit') commitFailure = error; throw error }
+  }
   try {
     await assert.rejects(f.git.restore(f.first, f.expected), /超过 5 秒/)
+    assert.equal(commitFailure?.code, 'GIT_TIMEOUT', commitFailure?.cleanupError?.stack || commitFailure?.stack)
     for (const name of ['parent', 'child']) {
       const pid = Number(await fs.readFile(path.join(f.folder, `.git/process-${name}.pid`), 'utf8'))
       assert.equal(alive(pid), false, `hook ${name} is still alive`)

@@ -27,13 +27,13 @@ function runGitProcess(executable, args, options = {}) {
     encoding = 'utf8', onStdout, terminate = terminateTree, cleanupTimeout = 6500 } = options
   return new Promise((resolve, reject) => {
     let child, timer, cleanupTimer, stopped = false, cleanupDone = true, closed = false, settled = false
-    let reason, uncertain = false, cleanupFailed = false, exitCode, signal, stdoutBytes = 0, stderrBytes = 0
+    let reason, uncertain = false, cleanupError, exitCode, signal, stdoutBytes = 0, stderrBytes = 0
     const stdout = [], stderr = []
     const finish = () => {
       if (settled || !closed || !cleanupDone) return
       settled = true; clearTimeout(timer); clearTimeout(cleanupTimer)
       const errorText = Buffer.concat(stderr).toString('utf8').trim()
-      if (uncertain || (cleanupFailed && exitCode !== 0)) return reject(failure('GIT_PROCESS_UNCERTAIN', `${reason?.message || 'Git 读取已停止。'}\n无法确认 Git 及其子进程已停止；本会话暂停写入。请先检查进程和 Git 状态，再处理保留的操作锁。`, reason))
+      if (uncertain || (cleanupError && exitCode !== 0)) return reject(Object.assign(failure('GIT_PROCESS_UNCERTAIN', `${reason?.message || 'Git 读取已停止。'}\n无法确认 Git 及其子进程已停止；本会话暂停写入。请先检查进程和 Git 状态，再处理保留的操作锁。`, reason), { cleanupError }))
       if (reason) return reject(reason)
       if (!stopped && exitCode !== 0) return reject(failure('GIT_EXIT', errorText || `Git 未正常结束（${signal || `退出码 ${exitCode}`}）。请检查 Git 状态。`))
       const data = Buffer.concat(stdout)
@@ -48,7 +48,7 @@ function runGitProcess(executable, args, options = {}) {
         child.unref()
         finish()
       }, cleanupTimeout)
-      Promise.resolve().then(() => terminate(child)).catch(() => { cleanupFailed = true }).finally(() => { cleanupDone = true; finish() })
+      Promise.resolve().then(() => terminate(child)).catch(error => { cleanupError = error || new Error('Git 进程清理失败。') }).finally(() => { cleanupDone = true; finish() })
     }
     try {
       child = spawn(executable, args, { cwd, env, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] })
