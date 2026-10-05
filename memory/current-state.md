@@ -2,9 +2,11 @@
 
 更新时间：2026-10-05
 
-最新批次：插件宿主生命周期（基线 dc43f02）。VS Code/DSH 已确认任务交给单次独立执行进程，宿主关闭后继续检查、执行和写入记录；旧面板确认与停用后的迟到请求不能开始写入。Windows Node/Electron 进程退出测试、DSH HTTP 停用边界及实装 VSIX 关闭/重开面板、退出整个应用后的恢复完成均已通过。当前接续见 `memory/handoff-2026-10-05-plugin-lifecycle.md`；完整公开交付目标保持未完成。
+最新批次：三端原生失败流程（基线 2aa19e4）。Windows 桌面、实装 VS Code/DSH 均通过 worktree 占用、确认后 index 锁、真实 ACL 拒绝、hook 失败及取消/继续的 UI 流程；DSH 管理页执行中停用后 worker 完成，重启用可见记录。修复桌面恢复成功后仍残留旧分支错误。当前接续见 `memory/handoff-2026-10-05-native-failure-flows.md`；完整公开交付目标保持未完成。
 
-本批主前端构建、lint、VSIX/DSH 打包通过；插件包及 SHA-256 在 `F:/Codex/work/gitviz-product/lifecycle-packages/`。解包 DSH 五个模块与源码一致，实际运行打包后的 worker 并退出宿主测试通过。完整 extension:test 45/45，含真实 Git 的迟到确认接缝测试；DSH 原有 8 项 + 停用新增 2 项均通过。未改 Rust、未重建桌面 exe；旧 process-packages exe 不含后续预检/结果核对。下一模块是 DSH 原生停用与三端原生失败流程，之后进入地图及发行验收。强杀 worker/整个进程树、断电、其他平台仍未验收。
+本批 `npm test` 20/20、lint、主前端及最终桌面 release 构建通过；当前 exe 位于 `F:/Codex/work/gitviz-product/native-failure-packages/gitviz.exe`，包含此前预检/结果核对及本次 UI 修复。三端结果和截图在 `native-failure-tests/`。插件生产代码未改，复用 lifecycle 包并核对安装模块哈希。自己的测试进程已关闭。下一模块进入地图折叠、概览、节点探索；多宿主完整原生并发、其他平台与 P3 发布门禁仍待完成。
+
+上批插件生命周期见 `memory/handoff-2026-10-05-plugin-lifecycle.md`：独立 worker、迟到确认拒绝、VS Code 实装退出验证。extension:test 45/45、DSH 共 10 个不同用例及 Node/Electron worker 退出测试通过。强杀 worker/整个进程树或断电仍可留下未完成现场。
 
 上批 Git 执行结果核对见 `memory/handoff-2026-10-05-operation-outcomes.md`：检查位置、父提交、tree、工作区及备份，拒绝暂存混入内容并保留实际现场。Node 共 40 个不同用例、Rust 共 25 个不同用例及 DSH 8 项通过；前后检查不构成跨程序原子事务。
 

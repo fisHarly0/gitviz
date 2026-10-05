@@ -190,6 +190,7 @@ export default function App() {
       <main className="split">
         <section className="graph-pane">
           <IfLinesPanel
+            key={`branches-${adapter.historyId}-${recoveryRevision}`}
             branches={branches}
             currentBranch={session.currentBranch}
             mainBranch={session.mainBranch}

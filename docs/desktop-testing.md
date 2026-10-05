@@ -33,3 +33,5 @@ Stop-Process -Id $testApp.Id
 - 不模拟 Tauri invoke，也不替换 Git 后端。打开仓库使用合成拖放事件；文件夹选择框尚未自动化验证。
 - 小窗口通过 WebView 视口模拟；没有覆盖物理多设备、跨平台、离线 Monaco 或操作系统强制关闭。
 - 这是开发验收入口，尚未接入 CI，不能据此宣称已完成正式发行安装与升级验收。
+
+后续 [三端原生失败测试](native-failure-testing.md) 补充真实 worktree 占用、索引锁和 Windows 写入权限拒绝，使用当前源码重建的 exe；成功恢复后还检查分支栏不残留旧错误。

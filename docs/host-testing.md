@@ -41,3 +41,5 @@ node tests/dsh-recovery-smoke.cjs
 脚本自行生成新仓库并通过面板打开，覆盖建分支/试验目录的最终确认、取消、目标分支变化拒绝、960×700 确认框、失败恢复、外部文件修改拒绝、实际新提交和完整页面刷新后的记录持久；页面和控制台渲染错误都会导致失败。需要已启用的 Gitviz 插件，不进行模型调用。
 
 两套脚本默认 CDP 9235，可通过 `GITVIZ_CDP_URL` 修改；DSH 页面默认使用 3087。结果 JSON 和截图保存在测试目录。结束后关闭本次测试宿主；不自动删除仓库，保留现场用于诊断。
+
+后续新增 [三端原生失败测试](native-failure-testing.md)，包含真实 worktree 占用、索引锁、Windows ACL 拒绝、hook 失败与继续，以及 DSH 管理页执行中停用。新版 VS Code 可用 F1 打开命令面板；Integrated Browser 若直接出现“Search or enter URL”，在该地址栏输入启动地址，而非等待第二个命令输入框。不要将含 token 的地址写入日志或文档。

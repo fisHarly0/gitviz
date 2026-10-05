@@ -27,8 +27,9 @@
 | DSH 停用期间的延迟请求正文 | 真实 HTTP 测试拒绝，无写入 |
 | DSH 恢复 hook 执行时停用 | 真实 HTTP 测试中已经接受的恢复完成，后续请求拒绝 |
 | 已安装 VSIX，关闭并重开版本树，随后退出整个 VS Code | 原生确认及真实 Git hook；退出后 worker 仍在，放行后恢复完成，核对父提交/tree/工作区/记录/锁 |
+| 已安装 DSH 包，从插件管理页在 hook 执行中停用，再启用 | 后续原生验收通过；侧栏/样式释放，worker 在停用时完成并释放锁，重新启用后显示唯一完成记录 |
 
-仅终止测试宿主 PID 的测试不等于杀死整个进程树。DSH 本批验证到 HTTP handler 与实际执行进程；未重新进行 DSH 原生插件管理页停用测试。Linux/macOS、远程 Extension Host 尚未运行生命周期验证，桌面 Tauri 沿用独立的 [窗口关闭保护](desktop-close.md)。
+仅终止测试宿主 PID 的测试不等于杀死整个进程树。DSH 最初验证到 HTTP handler 与实际执行进程，后续已补 [原生插件管理页停用验收](native-failure-testing.md)。Linux/macOS、远程 Extension Host 尚未运行生命周期验证，桌面 Tauri 沿用独立的 [窗口关闭保护](desktop-close.md)。
 
 回归入口：`npm run extension:test`、`npm run dsh:test`。原生脚本 `tests/vscode-lifecycle-smoke.cjs` 必须使用隔离 VS Code profile、已安装开发 VSIX、显式指定的合成仓库与 CDP 连接；只操作测试仓库。脚本需要测试 profile 中的 `Gitviz Fixture Quit` 命令调用真实 `workbench.action.quit`，该命令不属于产品插件。
 
