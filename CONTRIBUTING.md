@@ -6,6 +6,8 @@
 
 使用 `.node-version` 中的 Node 版本；`npm ci` 安装锁定依赖。桌面还需要 Rust、系统原生编译依赖和 Git，参见 [Tauri 环境要求](https://tauri.app/start/prerequisites/)。CI 固定 Rust 1.95.0。
 
+真实签名测试还需要 PATH 中的 OpenSSH `ssh-keygen`。测试仅在合成仓库内生成无密码临时密钥、设置仓库级 SSH 签名并执行 `git verify-commit`；不读取个人密钥或修改全局配置。缺少工具时测试会失败，不会把签名验证跳过后算作通过。
+
 Windows 本机项目、测试副本与缓存使用 F 盘；没有 F 盘的贡献者通过 `GITVIZ_TEST_ROOT`、`GITVIZ_PRODUCT_TEST_ROOT`、`GITVIZ_LARGE_TEST_ROOT`、`GITVIZ_DELIVERY_TEST_ROOT` 指定自己的临时目录。CI 使用 runner 临时目录，不依赖 F 盘。
 
 ```bash

@@ -16,6 +16,7 @@ async function wait(check, label) {
   assert.ok(out && path.isAbsolute(out), 'absolute evidence directory required')
   await fs.mkdir(out, { recursive: true })
   await wait(() => fetch(site).then(r => r.ok, () => false), 'built preview')
+  await wait(() => fetch(endpoint + '/json/version').then(r => r.ok, () => false), 'VS Code debugging endpoint')
   const browser = await chromium.connectOverCDP(endpoint)
   const results = { mode: process.argv[2] || 'fixture', host: 'VS Code Integrated Browser', checks: [] }
   let page, handler
@@ -23,8 +24,8 @@ async function wait(check, label) {
     const pages = () => browser.contexts().flatMap(context => context.pages())
     page = pages().find(page => page.url().startsWith(site))
     if (!page) {
-      const code = pages().find(page => page.url().startsWith('vscode-file:'))
-      assert.ok(code, 'VS Code window available')
+      let code
+      await wait(() => { code = pages().find(page => page.url().startsWith('vscode-file:')); return !!code }, 'VS Code workbench page')
       await code.locator('.monaco-workbench').waitFor({ timeout: 120000 })
       for (const name of ['Continue without Signing In', 'Continue', 'Get Started']) {
         const button = code.getByRole('button', { name, exact: true })

@@ -4,6 +4,7 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 const os = require('node:os')
 const { GitService } = require('../extensions/vscode/git-service.cjs')
+const { configureSigning } = require('./helpers/signing-fixture.cjs')
 const testRoot = process.env.GITVIZ_TEST_ROOT || (process.platform === 'win32' ? 'F:/Codex/work/gitviz-tests' : path.join(os.tmpdir(), 'gitviz-tests'))
 
 test('prepared confirmations identify repository, full targets, file impact and unchanged original directory', async () => {
@@ -102,6 +103,55 @@ async function fixture() {
   const expected = async () => ({ head: await repo.head(), branch: await repo.branch() })
   return { root, repo, put, commit, expected }
 }
+
+test('SSH signing applies to restored commits and verifies against the configured fixture identity', async () => {
+  const f = await fixture()
+  await f.put('file.txt', 'first\n'); const first = await f.commit('first')
+  await f.put('file.txt', 'second\n'); const previous = await f.commit('second')
+  const { key } = await configureSigning(f.root)
+  try {
+    const plan = await f.repo.prepareAction('restore', { oid: first, expected: await f.expected() })
+    const result = await f.repo.executePrepared(plan)
+    await f.repo.command(['verify-commit', result.head])
+    assert.match(await f.repo.command(['cat-file', 'commit', result.head]), /gpgsig -----BEGIN SSH SIGNATURE-----/)
+    assert.equal((await f.repo.command(['rev-parse', 'HEAD^'])).trim(), previous)
+    assert.equal((await f.repo.command(['rev-parse', 'HEAD^{tree}'])).trim(), (await f.repo.command(['rev-parse', `${first}^{tree}`])).trim())
+    assert.equal((await f.repo.command(['rev-parse', result.backup])).trim(), previous)
+    assert.equal((await f.repo.command(['log', '-1', '--format=%an <%ae>|%cn <%ce>'])).trim(), 'Gitviz Test Fixture <fixture@example.invalid>|Gitviz Test Fixture <fixture@example.invalid>')
+    assert.equal(await f.repo.status(), '')
+    assert.equal((await f.repo.operations()).records[0].state, 'completed')
+  } finally { await fs.unlink(key) }
+})
+
+test('SSH signing failure retains restore checkpoint and reopening can continue with a valid signature', async () => {
+  const f = await fixture()
+  await f.put('file.txt', 'first\n'); const first = await f.commit('first')
+  await f.put('file.txt', 'second\n'); const previous = await f.commit('second')
+  const { key } = await configureSigning(f.root)
+  try {
+    await f.repo.command(['config', 'user.signingkey', key + '.missing'])
+    const expected = await f.expected()
+    await assert.rejects(f.repo.restore(first, expected), /sign|key|签名/i)
+    const record = (await f.repo.operations()).records[0]
+    assert.equal(record.state, 'failed')
+    assert.equal(await f.repo.head(), previous)
+    assert.equal(await fs.readFile(path.join(f.root, 'file.txt'), 'utf8'), 'first\n')
+    assert.equal((await f.repo.command(['write-tree'])).trim(), record.checkpoint.tree)
+    assert.equal((await f.repo.command(['rev-parse', record.backup])).trim(), previous)
+    assert.equal((await f.repo.command(['config', '--get', 'commit.gpgsign'])).trim(), 'true')
+    await f.repo.command(['config', 'user.signingkey', key])
+    const reopened = await GitService.open(f.root)
+    const plan = await reopened.prepareAction('resumeCommit', { id: record.id, expected })
+    const result = await reopened.executePrepared(plan)
+    await reopened.command(['verify-commit', result.head])
+    assert.equal((await reopened.command(['rev-parse', 'HEAD^'])).trim(), previous)
+    assert.equal((await reopened.command(['rev-parse', 'HEAD^{tree}'])).trim(), record.checkpoint.tree)
+    assert.equal(result.backup, record.backup)
+    const completed = (await reopened.operations()).records[0]
+    assert.equal(completed.id, record.id); assert.equal(completed.state, 'completed'); assert.equal(completed.attempts, 2)
+    assert.equal(await reopened.status(), '')
+  } finally { await fs.unlink(key) }
+})
 
 test('empty repository, root commit, unicode and special filenames', async () => {
   const f = await fixture()

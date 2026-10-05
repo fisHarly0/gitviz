@@ -21,7 +21,7 @@
 - [x] 首次使用、Git 安装/目录/PATH/宿主重启、GitHub 只读和更新指引，见 `docs/first-use.md`。
 - [x] 试验流程：插件直接比较 HEAD 与选中提交、退出预览；桌面/DSH 打开试验后按本次会话路径返回，VS Code 明确新窗口行为；差异基准与试验保留说明，桌面当前试验分支编辑入口及导航保护。验证范围见 `memory/handoff-2026-10-05-trial-journey.md`。
 - [ ] GitHub 在线错误流程实机回归、剩余语言与可访问性审查，以及最终发行包的首次使用复验；以上子项不关闭完整 P2。
-- [x] GitHub 只读地图复用全部父边/折叠/搜索/键盘，远程浏览基准文案、受控权限/限流/断网/部分失败与重试、缺失 patch 提示；31 项测试、三端前端构建、Windows Integrated Browser 受控场景通过。真实公开仓库地图及详情截图已核对；加强后的最终 live 断言因实际额度耗尽仍待复验，证据与限制见 `memory/handoff-2026-10-05-github-readonly.md`。不关闭上方完整在线/可访问性子项。
+- [x] GitHub 只读地图复用全部父边/折叠/搜索/键盘，远程浏览基准文案、受控权限/限流/断网/部分失败与重试、缺失 patch 提示；31 项测试、三端前端构建、Windows Integrated Browser 受控场景通过。额度恢复后加强的真实 live 详情、键盘返回及宽窄视口断言通过，见 `live-recovered.log` 和 `memory/handoff-2026-10-05-github-readonly.md`。不关闭全面可访问性与最终包子项。
 
 本批代码、产物与验证边界见 `memory/handoff-2026-10-05-first-use.md`。上批 5b8e6b5 / CI 37293801905 三系统成功；该 CI 包不含本批改动。
 
@@ -46,6 +46,7 @@
 
 - [x] 移除旧写入 IPC；桌面通过 prepare/execute/cancel 绑定仓库、HEAD、分支和一次性确认。
 - [x] Git switch 真正同步工作目录与 index；保存通过 Git commit，尊重用户身份和 hooks。
+- [x] 真实 SSH 提交签名：共享插件后端恢复、桌面编辑均用 fixture 临时密钥生成提交并通过 `git verify-commit`；密钥不可读时保留 HEAD/文件/index/检查点，修正配置后新服务/操作实例续交仍有有效签名。Node 2 项、Rust 2 项通过；不冒充 GPG、硬件密钥或交互式解锁已验证，见签名交接。
 - [x] 路径、元数据、Windows 保留路径/链接保护；临时文件替换避免硬链接旁路写入。
 - [x] 6 组 Rust 真实 Git 测试通过，含 restore 保留历史及独立 worktree 的后端行为。
 - [x] 原生桌面 UI 验证取消、fork、编辑、保存身份、切换同步、未保存导航保护；960×600 确认框与键盘检查通过。

@@ -586,6 +586,51 @@ mod tests {
         assert_eq!(git(&f.root, &["log", "-1", "--format=%an <%ae>"]).unwrap().trim(), "Fixture Author <fixture@example.invalid>");
         assert!(git(&f.root, &["status", "--porcelain"]).unwrap().is_empty());
     }
+    fn signing_fixture(f: &Fixture) -> String {
+        let helper = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("tests/helpers/signing-fixture.cjs");
+        let mut command = Command::new("node"); command.arg(helper).arg(&f.root).current_dir(&f.root);
+        #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
+        let output = command.output().expect("Node and OpenSSH ssh-keygen are required for signing verification");
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        let data: Value = serde_json::from_slice(&output.stdout).unwrap();
+        data["key"].as_str().unwrap().to_owned()
+    }
+    #[test]
+    fn ssh_signing_edit_uses_configured_identity_and_verifiable_signature() {
+        let f = Fixture::new(); let key = signing_fixture(&f);
+        let result = f.perform(f.save("signed edit\n")).unwrap();
+        git(&f.root, &["verify-commit", result["head"].as_str().unwrap()]).unwrap();
+        assert!(git(&f.root, &["cat-file", "commit", "HEAD"]).unwrap().contains("gpgsig -----BEGIN SSH SIGNATURE-----"));
+        assert_eq!(git(&f.root, &["log", "-1", "--format=%an <%ae>|%cn <%ce>"]).unwrap().trim(), "Fixture Author <fixture@example.invalid>|Fixture Author <fixture@example.invalid>");
+        assert_eq!(git(&f.root, &["rev-parse", "HEAD^"]).unwrap().trim(), f.latest);
+        assert_eq!(git(&f.root, &["show", "HEAD:中文.txt"]).unwrap(), "signed edit\n");
+        assert!(git(&f.root, &["status", "--porcelain"]).unwrap().is_empty());
+        assert_eq!(journal::list(&f.root, None, 30).unwrap()["records"][0]["state"], "completed");
+        fs::remove_file(key).unwrap();
+    }
+    #[test]
+    fn ssh_signing_failure_retains_edit_and_reopened_operation_can_resume_signed() {
+        let f = Fixture::new(); let key = signing_fixture(&f);
+        git(&f.root, &["config", "user.signingkey", &format!("{key}.missing")]).unwrap();
+        let error = f.perform(f.save("keep signed edit\n")).unwrap_err();
+        assert!(error.contains("key") || error.contains("sign"), "{error}");
+        let record = journal::list(&f.root, None, 30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"], "failed"); assert_eq!(head(&f.root).unwrap(), f.latest);
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "keep signed edit\n");
+        assert_eq!(git(&f.root, &["write-tree"]).unwrap().trim(), record["checkpoint"]["tree"].as_str().unwrap());
+        assert_eq!(git(&f.root, &["config", "--get", "commit.gpgsign"]).unwrap().trim(), "true");
+        git(&f.root, &["config", "user.signingkey", &key]).unwrap();
+        let id = record["id"].as_str().unwrap();
+        // perform creates a new Operations instance, as a reopened app would.
+        let result = f.perform(Action::ResumeCommit { id: id.into() }).unwrap();
+        git(&f.root, &["verify-commit", result["head"].as_str().unwrap()]).unwrap();
+        assert_eq!(git(&f.root, &["rev-parse", "HEAD^"]).unwrap().trim(), f.latest);
+        assert_eq!(git(&f.root, &["rev-parse", "HEAD^{tree}"]).unwrap().trim(), record["checkpoint"]["tree"].as_str().unwrap());
+        let completed = journal::read(&f.root, id).unwrap();
+        assert_eq!(completed["state"], "completed"); assert_eq!(completed["attempts"], 2);
+        assert!(git(&f.root, &["status", "--porcelain"]).unwrap().is_empty());
+        fs::remove_file(key).unwrap();
+    }
     #[test]
     fn preview_is_read_only_confirmation_is_single_use_and_repo_bound() {
         let f = Fixture::new(); let other = Fixture::new(); let mut ops = Operations::default();
