@@ -56,6 +56,12 @@ test('local same-origin carrier rejects foreign origins, bad host and missing cl
 test('two-phase write does nothing before execute, binds parameters and cannot replay', async t => {
   const f = await fixture(t)
   const { result: plan } = await f.call('prepare', { action: 'createBranch', name: '试验', oid: f.first, expected: f.expected }, f.repoId)
+  assert.equal(plan.title, '创建分支'); assert.equal(plan.confirmLabel, '确认创建分支')
+  assert.equal(plan.expected.repo.replaceAll('\\', '/'), f.root.replaceAll('\\', '/'))
+  assert.equal(plan.expected.head, f.expected.head); assert.equal(plan.target, f.first)
+  assert.deepEqual(plan.files, ['中文.txt']); assert.match(plan.description, /中文.txt/)
+  assert.ok(plan.description.includes(f.first) && plan.description.includes(f.expected.head))
+  assert.match(plan.filesLabel, /原目录不变/)
   assert.equal((await f.git.snapshot()).branches.length, 1)
   assert.match((await f.call('execute', { token: plan.token }, 'wrong')).error, /失效/)
   const done = await f.call('execute', { token: plan.token, name: 'injected', oid: f.expected.head }, f.repoId)
@@ -63,6 +69,21 @@ test('two-phase write does nothing before execute, binds parameters and cannot r
   assert.equal(done.result.snapshot.branches.find(b => b.name === '试验').oid, f.first)
   assert.equal(await f.git.head(), f.expected.head)
   assert.match((await f.call('execute', { token: plan.token }, f.repoId)).error, /已使用/)
+})
+
+test('DSH switch ticket binds the target branch revision and cannot be changed by execute parameters', async t => {
+  const f = await fixture(t)
+  await f.git.command(['branch', 'target', f.first])
+  const prepared = await f.call('prepare', { action: 'switchBranch', name: 'target', expected: f.expected }, f.repoId)
+  assert.equal(prepared.status, 200, prepared.error)
+  assert.equal(prepared.result.target, f.first)
+  assert.deepEqual(prepared.result.files, ['中文.txt'])
+  await f.git.command(['update-ref', 'refs/heads/target', f.expected.head, f.first])
+  const rejected = await f.call('execute', { token: prepared.result.token, expected: { ...f.expected, revision: '' }, name: 'main' }, f.repoId)
+  assert.match(rejected.error, /历史已变化/)
+  assert.equal(await f.git.head(), f.expected.head); assert.equal(await f.git.branch(), 'main')
+  assert.equal((await f.git.operations()).records.length, 0)
+  assert.match((await f.call('execute', { token: prepared.result.token }, f.repoId)).error, /已使用/)
 })
 
 test('expired confirmation, changed HEAD and newly dirty worktree reject execution', async t => {

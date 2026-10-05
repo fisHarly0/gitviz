@@ -85,43 +85,27 @@ function activate(context) {
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(params.path), { forceNewWindow: true })
       return {}
     }
-    if (method === 'resumeCommit') {
-      ensureSavedEditors(repo)
-      const record = await repo.pendingCommit(params.id, params.expected)
-      const files = (await repo.command(['diff', '--cached', '--name-only', '-z', '--'])).split('\0').filter(Boolean)
-      const okay = await vscode.window.showWarningMessage('继续失败的提交？', { modal: true, detail: `仓库：${repo.root}\n操作：${record.id}\n将提交 ${files.length} 个文件，仅接受失败时的检查点，不自动暂存新的改动。Git 身份、签名和钩子继续生效。\n\n${files.slice(0, 8).join('\n')}` }, '检查并继续提交')
-      if (!okay) return { cancelled: true }
-      ensureSavedEditors(repo)
-      return { ...await repo.resumeCommit(params.id, params.expected, record.checkpoint), snapshot: await getSnapshot() }
-    }
-    if (!['createBranch', 'switchBranch', 'createWorktree', 'restore'].includes(method)) throw new Error('不支持的请求。')
-    if (['switchBranch', 'restore'].includes(method)) ensureSavedEditors(repo)
+    if (!['createBranch', 'switchBranch', 'createWorktree', 'restore', 'resumeCommit'].includes(method)) throw new Error('不支持的请求。')
+    const needsSavedEditors = ['switchBranch', 'restore', 'resumeCommit'].includes(method)
+    if (needsSavedEditors) ensureSavedEditors(repo)
     await repo.guard(params.expected, ['switchBranch', 'restore'].includes(method))
-    let result
+    const input = { ...params }
     if (method === 'createBranch' || method === 'createWorktree') {
       await repo.assertOid(params.oid)
       const name = await vscode.window.showInputBox({ title: method === 'createBranch' ? '创建分支（不切换）' : '创建独立试验工作区', value: `if-${params.oid.slice(0, 7)}-${Date.now().toString(36)}`, prompt: '输入新分支名；原工作目录保持不变。', validateInput: async value => { try { await repo.validateBranch(value); return null } catch { return '请输入有效的 Git 分支名。' } } })
       if (!name) return { cancelled: true }
-      if (method === 'createBranch') result = await repo.createBranch(params.oid, name, params.expected)
-      else {
+      input.name = name
+      if (method === 'createWorktree') {
         const defaultRoot = process.platform === 'win32' && await fs.stat('F:/').catch(() => null) ? 'F:/Codex/worktrees' : path.join(path.dirname(repo.root), 'gitviz-worktrees')
-        const parent = vscode.workspace.getConfiguration('gitviz').get('worktreeDirectory') || defaultRoot
-        result = await repo.createWorktree(params.oid, name, parent, params.expected)
-        allowedWorktrees.add(result.worktree)
+        input.directory = vscode.workspace.getConfiguration('gitviz').get('worktreeDirectory') || defaultRoot
       }
-    } else if (method === 'switchBranch') {
-      const okay = await vscode.window.showWarningMessage(`切换到 ${params.name}？`, { modal: true, detail: '工作文件会同步到这个分支。未提交或未跟踪文件会阻止切换。' }, '切换分支')
-      if (!okay) return { cancelled: true }
-      ensureSavedEditors(repo)
-      result = await repo.switchBranch(params.name, params.expected)
-    } else {
-      const files = await repo.files(params.expected.head, params.oid)
-      if (!files.length) throw new Error('这个存档与当前文件内容相同，无需恢复。')
-      const okay = await vscode.window.showWarningMessage(`将 ${params.expected.branch || '游离 HEAD'} 恢复到存档 ${params.oid.slice(0, 7)}？`, { modal: true, detail: `将更新 ${files.length} 个文件，并创建一个新提交。恢复前会保留备份分支，现有提交历史不会删除。\n\n${files.slice(0, 8).map(file => `${file.status}  ${file.path}`).join('\n')}${files.length > 8 ? '\n…' : ''}` }, '备份并恢复为新提交')
-      if (!okay) return { cancelled: true }
-      ensureSavedEditors(repo)
-      result = await repo.restore(params.oid, params.expected)
     }
+    const plan = await repo.prepareAction(method, input)
+    const okay = await vscode.window.showWarningMessage(plan.preview.title, { modal: true, detail: GitService.confirmationText(plan.preview) }, plan.preview.confirmLabel)
+    if (okay !== plan.preview.confirmLabel) return { cancelled: true }
+    if (needsSavedEditors) ensureSavedEditors(repo)
+    const result = await repo.executePrepared(plan)
+    if (result.worktree) allowedWorktrees.add(result.worktree)
     return { ...result, snapshot: await getSnapshot() }
   }
 

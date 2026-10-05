@@ -2,11 +2,15 @@
 
 更新时间：2026-10-05
 
+最新批次：共有操作确认已对齐（基线 aa0d098）。VS Code 与 DSH 共用结构化预览和只读影响检查，显示仓库、完整起点/目标、目录和文件数量；VS Code 建分支/worktree 新增最终确认；准备前后和执行 guard 拒绝历史引用变化，桌面也修正了 revision 采集顺序。26 项 Node/布局用例（原 22 + 新增 4）、6 项 DSH 接口用例及两种插件实装确认/恢复流程通过。当前接续见 `memory/handoff-2026-10-05-confirmation-parity.md`；下一批处理异常 Git 进程/超时与剩余预检边界。完整公开交付目标保持未完成。
+
+本批 Rust 操作回归 10/10、`cargo check --release` 通过。桌面 UI 未改，exe 未重新打包；当前源代码的 revision 修正由真实 Git 测试验证，使用新桌面代码需重新构建。
+
 ## 当前目标：公开产品交付
 
 用户在 0.2.0 推送后授权持续完善至公开产品交付标准。验收入口：`spec/modules/public-product.md`；决策：`docs/decisions/2026-10-04-public-product.md`。基线 main / decad8e，开始时工作树干净。先统一桌面真实 Git 写入与失败恢复，再完善地图概览/折叠和发布 CI。以下 0.2.0 记录为已完成基线，不代表当前完整目标已达成。
 
-2026-10-05 已加入桌面正常窗口关闭保护：内容/提交说明草稿取消后保留；已有 Git 或编辑确认不被覆盖；Git 操作和整个导出占用同一门禁；失败保存后关闭仍保留文件/index/恢复记录。20 项前端测试、lint、桌面 release 构建与 6 组独立原生窗口场景通过，包括真实 hook 和导出保存框。当前接续见 `memory/handoff-2026-10-05-desktop-close.md`。仍缺部分三端确认一致性、异常进程/超时和插件宿主退出边界，以及后续 P2/P3；公开产品目标保持未完成。
+2026-10-05 已加入桌面正常窗口关闭保护：内容/提交说明草稿取消后保留；已有 Git 或编辑确认不被覆盖；Git 操作和整个导出占用同一门禁；失败保存后关闭仍保留文件/index/恢复记录。20 项前端测试、lint、桌面 release 构建与 6 组独立原生窗口场景通过，包括真实 hook 和导出保存框。关闭批次见 `memory/handoff-2026-10-05-desktop-close.md`。仍缺异常进程/超时、剩余预检与插件宿主退出边界，以及后续 P2/P3；公开产品目标保持未完成。
 
 前批已接通三端持久操作记录与失败提交继续入口：共用 JSON v1、按 worktree 隔离、确认前后核对 HEAD/分支/index tree/工作文件，保留备份和错误；桌面编辑未结束时禁止继续其他提交。Rust/Node 双向续交测试通过；DSH 实机发现宿主没有 `useEffectEvent`，已改用兼容 Hook。见 `memory/handoff-2026-10-05-operation-recovery.md`；上批桌面动作见 `memory/handoff-2026-10-05-desktop-actions.md`。
 

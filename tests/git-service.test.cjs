@@ -6,6 +6,88 @@ const os = require('node:os')
 const { GitService } = require('../extensions/vscode/git-service.cjs')
 const testRoot = process.env.GITVIZ_TEST_ROOT || (process.platform === 'win32' ? 'F:/Codex/work/gitviz-tests' : path.join(os.tmpdir(), 'gitviz-tests'))
 
+test('prepared confirmations identify repository, full targets, file impact and unchanged original directory', async () => {
+  const f = await fixture()
+  for (let i = 0; i < 12; i++) await f.put(`中文 ${i}.txt`, 'first\n')
+  const first = await f.commit('first')
+  for (let i = 0; i < 12; i++) await f.put(`中文 ${i}.txt`, 'second\n')
+  const expected = await f.expected(), second = await f.commit('second')
+  expected.head = second
+  const directory = path.join(testRoot, 'preview-only-directory')
+  for (const action of ['createBranch', 'createWorktree', 'restore']) {
+    const plan = await f.repo.prepareAction(action, { oid: first, name: 'preview-branch', directory, expected })
+    assert.equal(plan.preview.expected.repo, f.root)
+    assert.equal(plan.preview.expected.head, second)
+    assert.equal(plan.preview.target, first)
+    assert.equal(plan.preview.files.length, 12)
+    const text = GitService.confirmationText(plan.preview)
+    assert.ok(text.includes(f.root) && text.includes(first) && text.includes(second))
+    assert.match(text, /其余 4 个文件未展开/)
+    if (action !== 'restore') assert.match(plan.preview.filesLabel, /原目录不变/)
+    if (action === 'createWorktree') assert.equal(plan.preview.directory, path.resolve(directory))
+  }
+  assert.equal(await f.repo.head(), second)
+  assert.equal(await f.repo.status(), '')
+  assert.equal((await f.repo.operations()).records.length, 0)
+  assert.equal((await f.repo.snapshot()).branches.length, 1)
+})
+
+test('prepared switch rejects an externally moved target even when current HEAD is unchanged', async () => {
+  const f = await fixture()
+  await f.put('a.txt', 'first'); const first = await f.commit('first')
+  await f.put('a.txt', 'second'); const second = await f.commit('second')
+  await f.repo.command(['branch', 'other', first])
+  const plan = await f.repo.prepareAction('switchBranch', { name: 'other', expected: await f.expected() })
+  assert.equal(plan.preview.target, first)
+  assert.deepEqual(plan.preview.files, ['a.txt'])
+  await f.repo.command(['update-ref', 'refs/heads/other', second, first])
+  await assert.rejects(f.repo.executePrepared(plan), /历史已变化/)
+  await assert.rejects(f.repo.executePrepared(plan), /已使用/)
+  assert.equal(await f.repo.branch(), 'main')
+  assert.equal(await f.repo.head(), second)
+  assert.equal(await f.repo.status(), '')
+  assert.equal((await f.repo.operations()).records.length, 0)
+  const fresh = await f.repo.prepareAction('switchBranch', { name: 'other', expected: await f.expected() })
+  await f.repo.executePrepared(fresh)
+  assert.equal(await f.repo.branch(), 'other')
+})
+
+test('prepared actions expire and are bound to their repository, with no journal entry on rejection', async () => {
+  const f = await fixture(), other = await fixture()
+  await f.put('a.txt', 'first'); const first = await f.commit('first')
+  await other.put('b.txt', 'other'); await other.commit('other')
+  const params = { oid: first, name: 'expired', expected: await f.expected() }
+  const expired = await f.repo.prepareAction('createBranch', params)
+  expired.expires = Date.now() - 1
+  await assert.rejects(f.repo.executePrepared(expired), /过期/)
+  const wrong = await f.repo.prepareAction('createBranch', params)
+  await assert.rejects(other.repo.executePrepared(wrong), /仓库已变化|不是|提交|bad object/)
+  assert.equal((await f.repo.snapshot()).branches.length, 1)
+  assert.equal((await f.repo.operations()).records.length, 0)
+  assert.equal((await other.repo.operations()).records.length, 0)
+})
+
+test('preview rejects a target update while the initial history snapshot is being read', async () => {
+  const f = await fixture()
+  await f.put('a.txt', 'first'); const first = await f.commit('first')
+  await f.put('a.txt', 'second'); const second = await f.commit('second')
+  await f.repo.command(['branch', 'target', first])
+  const readHistory = f.repo.historyState.bind(f.repo)
+  let changed = false
+  f.repo.historyState = async () => {
+    const state = await readHistory()
+    if (!changed) {
+      changed = true
+      await f.repo.command(['update-ref', 'refs/heads/target', second, first])
+    }
+    return state
+  }
+  await assert.rejects(f.repo.prepareAction('switchBranch', { name: 'target', expected: await f.expected() }), /历史已变化/)
+  assert.equal(await f.repo.branch(), 'main'); assert.equal(await f.repo.head(), second)
+  assert.equal(await f.repo.status(), '')
+  assert.equal((await f.repo.operations()).records.length, 0)
+})
+
 async function fixture() {
   await fs.mkdir(testRoot, { recursive: true })
   const root = await fs.mkdtemp(path.join(testRoot, 'repo-'))

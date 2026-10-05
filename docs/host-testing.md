@@ -27,7 +27,7 @@ $env:PLAYWRIGHT_CORE_PATH='F:\gitviz-work\browser-check\node_modules\playwright-
 node tests/vscode-recovery-smoke.cjs
 ```
 
-覆盖已安装扩展、真实原生确认、取消、确认后外部修改拒绝、继续提交及 tree/parent/backup 校验。它通过 Webview DOM 操作界面，不伪造扩展消息或 Git 后端。每次重跑创建新 fixture 并重新打开窗口。
+覆盖已安装扩展、建分支/试验目录的最终确认与取消、完整仓库/起点/目标/文件信息、确认期间目标分支外部推进拒绝、真实原生恢复确认、确认后外部文件修改拒绝、继续提交及 tree/parent/backup 校验。脚本从命令面板打开版本树，通过 Webview DOM 操作界面，不伪造扩展消息或 Git 后端。每次重跑创建新 fixture 并重新打开窗口。
 
 ## DSH
 
@@ -38,6 +38,6 @@ node tests/vscode-recovery-smoke.cjs
 node tests/dsh-recovery-smoke.cjs
 ```
 
-脚本自行生成新仓库并通过面板打开，覆盖失败恢复、取消、外部修改拒绝、实际新提交和完整页面刷新后的记录持久；页面和控制台渲染错误都会导致失败。需要已启用的 Gitviz 插件，不进行模型调用。
+脚本自行生成新仓库并通过面板打开，覆盖建分支/试验目录的最终确认、取消、目标分支变化拒绝、960×700 确认框、失败恢复、外部文件修改拒绝、实际新提交和完整页面刷新后的记录持久；页面和控制台渲染错误都会导致失败。需要已启用的 Gitviz 插件，不进行模型调用。
 
 两套脚本默认 CDP 9235，可通过 `GITVIZ_CDP_URL` 修改；DSH 页面默认使用 3087。结果 JSON 和截图保存在测试目录。结束后关闭本次测试宿主；不自动删除仓库，保留现场用于诊断。

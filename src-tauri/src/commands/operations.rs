@@ -306,12 +306,18 @@ fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint:
     }
 }
 
+fn preview_at_revision(root: &Path, expected: &Expected, action: &Action, revision: &str) -> Result<Value, String> {
+    let preview = validate(root, expected, action)?;
+    if super::history::snapshot(root, 20)?["revision"] != revision { return Err("历史已变化，请重新预览操作。".into()); }
+    Ok(preview)
+}
+
 impl Operations {
     pub fn prepare(&mut self, root: &Path, expected: Expected, action: Action) -> Result<Value, String> {
         self.plans.retain(|_,p|p.created.elapsed() < Duration::from_secs(300));
         if self.plans.len() >= 32 { return Err("待确认操作过多，请稍后重试。".into()); }
-        let mut preview = validate(root, &expected, &action)?;
         let revision = super::history::snapshot(root, 20)?["revision"].as_str().unwrap().to_owned();
+        let mut preview = preview_at_revision(root, &expected, &action, &revision)?;
         let token = nonce()?;
         let checkpoint = if matches!(action,Action::ResumeCommit { .. }) {Some(preview["checkpoint"].clone())} else {None};
         self.plans.insert(token.clone(), Plan { root: canonical(root)?, expected, action, revision, checkpoint, created: Instant::now() });
@@ -423,6 +429,25 @@ mod tests {
         assert!(ops.execute(&f.root, plan["token"].as_str().unwrap()).unwrap_err().contains("历史已变化"));
         fs::write(f.root.join(".git/MERGE_HEAD"), &f.first).unwrap(); assert!(f.perform(f.save("new\n")).unwrap_err().contains("合并"));
         assert_eq!(head(&f.root).unwrap(), f.latest);
+    }
+    #[test]
+    fn target_revision_changes_during_preview_or_confirmation_do_not_switch() {
+        let f = Fixture::new(); let mut ops = Operations::default();
+        git(&f.root, &["branch", "target", &f.first]).unwrap();
+        let revision = super::super::history::snapshot(&f.root, 20).unwrap()["revision"].as_str().unwrap().to_owned();
+        let action = Action::SwitchBranch { name: "target".into() };
+        let plan = ops.prepare(&f.root, f.expected(), action.clone()).unwrap();
+        assert_eq!(plan["target"], f.first);
+        assert_eq!(plan["files"].as_array().unwrap().len(), 3);
+        git(&f.root, &["update-ref", "refs/heads/target", &f.latest, &f.first]).unwrap();
+        // Deterministically enter the validation phase with the revision captured
+        // before an external target update, as prepare() does before reading files.
+        assert!(preview_at_revision(&f.root, &f.expected(), &action, &revision).unwrap_err().contains("历史已变化"));
+        assert!(ops.execute(&f.root, plan["token"].as_str().unwrap()).unwrap_err().contains("历史已变化"));
+        assert_eq!(branch(&f.root), "main"); assert_eq!(head(&f.root).unwrap(), f.latest);
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "second\n");
+        assert!(git(&f.root, &["status", "--porcelain"]).unwrap().is_empty());
+        assert!(!f.root.join(".git/gitviz/operations").exists());
     }
     #[test]
     fn unsafe_paths_and_git_metadata_are_rejected_and_hardlink_target_is_untouched() {

@@ -89,8 +89,7 @@ function Panel() {
             if (!name) return { cancelled: true }
           }
           const prepared = await rpc('prepare', { ...params, name, action: method })
-          const titles = { createBranch: '确认创建分支', switchBranch: '确认切换分支', createWorktree: '确认创建独立试验线', restore: '确认恢复此存档', resumeCommit: '继续失败的提交' }
-          if (!await ask({ title: titles[method], description: prepared.description, repo: prepared.repo, confirm: method === 'restore' ? '保留历史并恢复' : method === 'resumeCommit' ? '检查并继续提交' : '确认操作' })) { await rpc('cancel', { token: prepared.token }); return { cancelled: true } }
+          if (!await ask({ title: prepared.title, description: prepared.description, confirm: prepared.confirmLabel })) { await rpc('cancel', { token: prepared.token }); return { cancelled: true } }
           const result = await rpc('execute', { token: prepared.token })
           if (result.worktree) created.add(result.worktree)
           return result

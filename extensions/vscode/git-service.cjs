@@ -173,7 +173,9 @@ class GitService {
 
   async guard(expected, clean = true) {
     if (!expected || !OID.test(expected.head || '')) throw new Error('缺少当前工作区快照。请刷新。')
+    if (expected.repo && expected.repo !== this.root) throw new Error('仓库已变化，请重新预览操作。')
     if (await this.head() !== expected.head || await this.branch() !== expected.branch) throw new Error('当前分支或 HEAD 已变化。请刷新后重新选择。')
+    if (expected.revision && (await this.historyState()).revision !== expected.revision) throw new Error('历史已变化，请重新预览操作。')
     if (clean && await this.status()) throw new Error('工作区有未提交或未跟踪文件。请先提交或暂存到 stash，再执行此操作。')
     for (const marker of ['MERGE_HEAD', 'CHERRY_PICK_HEAD', 'REVERT_HEAD', 'rebase-merge', 'rebase-apply', 'sequencer']) {
       const file = (await this.command(['rev-parse', '--git-path', marker])).trim()
@@ -253,6 +255,81 @@ class GitService {
     await this.command(['check-ref-format', '--branch', name])
     // check-ref-format expands @{-1}; only accept literal names.
     if (name.includes('@{')) throw new Error('分支名不能包含引用表达式。')
+  }
+
+  async prepareAction(action, params = {}) {
+    if (!['createBranch', 'switchBranch', 'createWorktree', 'restore', 'resumeCommit'].includes(action)) throw new Error('不支持的 Git 操作。')
+    const initial = await this.historyState()
+    const expected = { repo: this.root, head: params.expected?.head, branch: params.expected?.branch, revision: initial.revision }
+    await this.guard(expected, ['switchBranch', 'restore'].includes(action))
+    const operation = { action, expected }
+    let target, recovery
+    if (action === 'resumeCommit') {
+      recovery = await this.pendingCommit(params.id, expected)
+      operation.id = params.id; operation.checkpoint = recovery.checkpoint
+      target = recovery.params.oid
+    } else if (action === 'switchBranch') {
+      await this.validateBranch(params.name)
+      target = (await this.command(['rev-parse', '--verify', `refs/heads/${params.name}`])).trim()
+      await this.assertOid(target)
+      operation.name = params.name
+    } else {
+      target = await this.assertOid(params.oid); operation.oid = target
+      if (action !== 'restore') {
+        await this.validateBranch(params.name)
+        const exists = await this.command(['show-ref', '--verify', `refs/heads/${params.name}`]).then(() => true, () => false)
+        if (exists) throw new Error('分支名已存在，请选择其他名称。')
+        operation.name = params.name
+      }
+      if (action === 'createWorktree') {
+        if (typeof params.directory !== 'string' || !path.isAbsolute(params.directory)) throw new Error('试验目录必须是绝对路径。')
+        operation.directory = path.resolve(params.directory)
+      }
+    }
+    const files = recovery
+      ? (await this.command(['diff', '--cached', '--name-only', '-z', '--'])).split('\0').filter(Boolean)
+      : (await this.command(['diff', '--name-only', '-z', expected.head, target, '--'])).split('\0').filter(Boolean)
+    if (action === 'restore' && !files.length) throw new Error('这个存档与当前文件内容相同，无需恢复。')
+    const copy = {
+      createBranch: ['创建分支', '确认创建分支', '增加分支引用，当前工作文件保持不变。'],
+      switchBranch: ['切换分支', '切换分支', '切换真实分支，并同步暂存区与工作文件。'],
+      createWorktree: ['从此存档创建试验工作区', '确认创建工作区', '新建独立工作目录，原工作目录保持不变。'],
+      restore: ['恢复此存档', '备份并恢复为新提交', '先建立备份分支，再恢复文件并创建新提交，后续历史保留。Git 身份、签名和钩子仍生效。'],
+      resumeCommit: ['继续失败的提交', '检查并继续提交', '仅提交与失败检查点完全一致的暂存内容；不会自动暂存新的改动。Git 身份、签名和钩子继续生效。'],
+    }[action]
+    const preview = {
+      title: copy[0], confirmLabel: copy[1], impact: copy[2], expected, target,
+      branchName: operation.name, directory: operation.directory, files,
+      filesLabel: ['createBranch', 'createWorktree'].includes(action) ? '目标存档与当前 HEAD 的差异（原目录不变）' : recovery ? '将提交的暂存文件' : '将更新的文件',
+      operationId: recovery?.id, backup: recovery?.backup,
+    }
+    await this.guard(expected, ['switchBranch', 'restore'].includes(action))
+    return { operation, preview, expires: Date.now() + 300000, used: false }
+  }
+
+  async executePrepared(plan) {
+    if (plan.used || plan.expires <= Date.now()) throw new Error('确认已过期或已使用，请重新预览。')
+    plan.used = true
+    const op = plan.operation
+    if (op.expected.repo !== this.root) throw new Error('仓库已变化，请重新预览操作。')
+    if (op.action === 'createBranch') return this.createBranch(op.oid, op.name, op.expected)
+    if (op.action === 'switchBranch') return this.switchBranch(op.name, op.expected)
+    if (op.action === 'createWorktree') return this.createWorktree(op.oid, op.name, op.directory, op.expected)
+    if (op.action === 'resumeCommit') return this.resumeCommit(op.id, op.expected, op.checkpoint)
+    if (op.action === 'restore') return this.restore(op.oid, op.expected)
+    throw new Error('不支持的 Git 操作。')
+  }
+
+  static confirmationText(preview) {
+    const lines = [preview.impact, '', `仓库：${preview.expected.repo}`, `实际位置：${preview.expected.branch || '游离 HEAD'} · ${preview.expected.head}`]
+    if (preview.target) lines.push(`目标存档：${preview.target}`)
+    if (preview.branchName) lines.push(`分支名称：${preview.branchName}`)
+    if (preview.directory) lines.push(`试验父目录：${preview.directory}（将在这里新建独立子目录）`)
+    if (preview.operationId) lines.push(`继续操作：${preview.operationId}`)
+    if (preview.backup) lines.push(`恢复前备份：${preview.backup}`)
+    lines.push('', `${preview.filesLabel}（${preview.files.length}）`, ...preview.files.slice(0, 8))
+    if (preview.files.length > 8) lines.push(`列表显示前 8 个文件，其余 ${preview.files.length - 8} 个文件未展开。`)
+    return lines.join('\n')
   }
 
   async createBranch(oid, name, expected) {
