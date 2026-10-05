@@ -31,7 +31,8 @@
 - [x] Git CLI 超时/输出超限有界清理，状态不确定时暂停写入并保留已持有的跨宿主锁；Windows 真实 hook 派生进程、恢复与父进程退出后悬挂管道测试通过。Unix 仅实现，尚未运行。
 - [x] 三端稀疏检出与隐藏 index 标记预检对齐；子模块 ignore 配置不能掩盖未提交修改；恢复限制前移到插件预览，linked worktree 进行中状态在预览/执行均校验。Windows 真实仓库覆盖，见写入预检交接。
 - [x] 执行结果核对：三端检查位置/目标/提交父关系/tree/工作区及备份，异常保留实际现场并记录失败；真实 hooks 覆盖 HEAD 被移动、相同 tree 的错误父提交、worktree 修改，以及恢复/编辑暂存区混入内容。前后检查不宣称跨程序原子隔离。
-- [ ] 插件宿主退出、三端原生并发/失败流程及其他平台验证，再关闭上方 P1；Git 自身权限/hook/worktree 占用失败仍需原生端到端验收。
+- [x] 插件已确认操作交给独立进程：Windows 真实 Node/Electron 宿主退出后完成，实装 VSIX 关闭/重开面板及退出整个 VS Code 后恢复完成；迟到确认接缝测试与 DSH 停用 HTTP 边界通过。强杀执行进程/整棵树和断电不保证完成。
+- [ ] DSH 原生停用流程、三端原生并发/失败流程及其他平台验证，再关闭上方 P1；Git 自身权限/hook/worktree 占用失败仍需原生端到端验收。
 
 本批详情：`memory/handoff-2026-10-05-public-product-p1.md`。以上证据只覆盖首批，不代表整个公开交付目标完成。
 
@@ -48,3 +49,5 @@
 写入预检批次：`memory/handoff-2026-10-05-write-preflight.md`。稀疏/index 标记/子模块显示配置和 linked worktree 状态已对齐，执行期间的外部竞态与正式发行仍未完成。
 
 执行结果批次：`memory/handoff-2026-10-05-operation-outcomes.md`。可观察的结果不一致会报错，混入暂存内容不能直接提交或从无效检查点续交。Gitviz 仍无法禁止外部 Git 在最后一次检查后修改仓库。
+
+插件关闭批次：`memory/handoff-2026-10-05-plugin-lifecycle.md`。关闭 UI 不取消已交接的 Git 操作，重新打开需检查持久记录；Windows 证据不替代其他平台、DSH 原生停用和完整 P1/P2/P3 验收。

@@ -5,7 +5,9 @@ import path from 'node:path'
 import os from 'node:os'
 import http from 'node:http'
 import { once } from 'node:events'
+import { setTimeout as delay } from 'node:timers/promises'
 import { GitService } from '../extensions/vscode/git-service.cjs'
+import { OperationHost } from '../extensions/vscode/operation-host.cjs'
 import { createHandler } from '../extensions/dsh/host.mjs'
 
 async function fixture(t) {
@@ -24,7 +26,7 @@ async function fixture(t) {
   await fs.writeFile(path.join(root, '中文.txt'), 'second\n')
   await git.command(['add', '.']); await git.command(['commit', '-m', 'second'])
   let clock = Date.now()
-  const handler = createHandler({ GitService, config: { worktreeDirectory: path.join(parent, 'worktrees') }, port: () => server.address().port, now: () => clock })
+  const handler = createHandler({ GitService, OperationHost, config: { worktreeDirectory: path.join(parent, 'worktrees') }, port: () => server.address().port, now: () => clock })
   const server = http.createServer(handler)
   server.listen(0, '127.0.0.1'); await once(server, 'listening')
   const url = `http://127.0.0.1:${server.address().port}`
@@ -40,8 +42,53 @@ async function fixture(t) {
   })
   const { result: snapshot } = await call('open', { path: root })
   const repoId = snapshot.repoId, expected = { head: snapshot.head, branch: snapshot.branch }
-  return { root, git, first, snapshot, repoId, expected, call, expire: () => { clock += 300001 } }
+  return { root, git, first, snapshot, repoId, expected, call, handler, server, url, expire: () => { clock += 300001 } }
 }
+
+test('dispose rejects an execute whose request body arrives after the endpoint was closed', async t => {
+  const f = await fixture(t)
+  const { result: plan } = await f.call('prepare', { action: 'createBranch', oid: f.first, name: 'late-body', expected: f.expected }, f.repoId)
+  const accepted = once(f.server, 'request')
+  let request
+  const result = new Promise((resolve, reject) => {
+    request = http.request(f.url, { method: 'POST', headers: { Origin: f.url, 'Content-Type': 'application/json', 'X-Gitviz-Client': '1' } }, response => {
+      const chunks = []; response.on('data', chunk => chunks.push(chunk)); response.on('end', () => resolve({ status: response.statusCode, ...JSON.parse(Buffer.concat(chunks)) }))
+    })
+    request.on('error', reject); request.flushHeaders()
+  })
+  await accepted; f.handler.dispose()
+  request.end(JSON.stringify({ method: 'execute', repoId: f.repoId, params: { token: plan.token } }))
+  const rejected = await result
+  assert.equal(rejected.status, 400); assert.match(rejected.error, /已停用/)
+  assert.equal((await f.git.operations()).records.length, 0)
+  await assert.rejects(f.git.command(['show-ref', '--verify', 'refs/heads/late-body']))
+  assert.equal((await f.call('snapshot', {}, f.repoId)).status, 403)
+})
+
+test('dispose during a real hook preserves the worker until commit and journal finish', async t => {
+  const f = await fixture(t)
+  const helper = path.resolve('tests/helpers/gated-git-hook.cjs').replaceAll('\\', '/')
+  const executable = process.execPath.replaceAll('\\', '/')
+  await fs.writeFile(path.join(f.root, '.git/hooks/pre-commit'), `#!/bin/sh\nexec '${executable}' '${helper}'\n`, { mode: 0o755 })
+  const { result: plan } = await f.call('prepare', { action: 'restore', oid: f.first, expected: f.expected }, f.repoId)
+  const execution = f.call('execute', { token: plan.token }, f.repoId)
+  try {
+    const end = Date.now() + 30000
+    while (!await fs.stat(path.join(f.root, '.git/lifecycle-entered')).catch(() => null)) {
+      if (Date.now() > end) throw new Error('Hook was not reached')
+      await delay(100)
+    }
+    f.handler.dispose()
+    assert.equal((await f.git.operations()).records[0].state, 'running')
+    await fs.writeFile(path.join(f.root, '.git/lifecycle-release'), '')
+    assert.equal((await execution).status, 200)
+    const record = (await f.git.operations()).records[0]
+    assert.equal(record.state, 'completed')
+    assert.equal((await f.git.command(['rev-parse', 'HEAD^'])).trim(), f.expected.head)
+    assert.equal(await f.git.status(), '')
+    assert.equal((await f.call('snapshot', {}, f.repoId)).status, 403)
+  } finally { await fs.writeFile(path.join(f.root, '.git/lifecycle-release'), ''); await execution }
+})
 
 test('local same-origin carrier rejects foreign origins, bad host and missing client header', async t => {
   const f = await fixture(t)

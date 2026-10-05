@@ -6,14 +6,16 @@ const writes = new Set(['createBranch', 'switchBranch', 'createWorktree', 'resto
 const empty = { repo: null, name: '', head: null, branch: '', dirty: false, commits: [], branches: [], tags: [], writable: false }
 
 // No model tool registration: this carrier only serves the local browser panel.
-export function createHandler({ GitService, config = {}, port, now = Date.now }) {
+export function createHandler({ GitService, OperationHost, config = {}, port, now = Date.now }) {
   const repositories = new Map(), byRoot = new Map(), tickets = new Map()
+  const operations = new OperationHost()
   let disposed = false
   const worktrees = config.worktreeDirectory || (process.platform === 'win32' ? 'F:/Codex/worktrees' : path.join(os.homedir(), 'gitviz-worktrees'))
   if (!path.isAbsolute(worktrees)) throw new Error('worktreeDirectory 必须是绝对路径。')
   const open = async folder => {
     if (typeof folder !== 'string' || !path.isAbsolute(folder)) throw new Error('请输入本机 Git 仓库的绝对路径。')
     const service = await GitService.open(folder)
+    if (disposed) throw new Error('Gitviz 已停用，请重新打开插件。')
     const canonical = process.platform === 'win32' ? service.root.toLowerCase() : service.root
     let id = byRoot.get(canonical)
     if (!id) { id = randomUUID(); repositories.set(id, service); byRoot.set(canonical, id) }
@@ -42,6 +44,7 @@ export function createHandler({ GitService, config = {}, port, now = Date.now })
       case 'prepare': {
         if (!writes.has(p.action)) throw new Error('不支持的 Git 操作。')
         const plan = await git.prepareAction(p.action, { ...p, directory: worktrees })
+        if (disposed) throw new Error('Gitviz 已停用，未确认的操作已取消。')
         for (const [key, ticket] of tickets) if (ticket.expires <= now()) tickets.delete(key)
         if (tickets.size >= 100) throw new Error('待确认操作过多，请稍后重试。')
         const token = randomUUID()
@@ -56,7 +59,7 @@ export function createHandler({ GitService, config = {}, port, now = Date.now })
         const ticket = tickets.get(p.token)
         if (!ticket || ticket.repoId !== body.repoId || ticket.expires <= now()) throw new Error('确认已过期或已使用，请重新操作。')
         tickets.delete(p.token)
-        const result = await git.executePrepared(ticket.plan)
+        const result = await operations.execute(git, ticket.plan)
         return { ...result, snapshot: await snapshot() }
       }
       default: throw new Error('不支持的请求。')
@@ -77,12 +80,13 @@ export function createHandler({ GitService, config = {}, port, now = Date.now })
       const chunks = []
       let bytes = 0
       for await (const chunk of req) { bytes += chunk.length; if (bytes > 65536) throw new Error('请求过大。'); chunks.push(chunk) }
+      if (disposed) throw new Error('Gitviz 已停用，未开始的请求已取消。')
       const body = JSON.parse(Buffer.concat(chunks).toString('utf8'))
       if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('无效请求。')
       const result = await dispatch(body)
-      res.end(JSON.stringify({ result }))
-    } catch (error) { res.statusCode = 400; res.end(JSON.stringify({ error: error.message })) }
+      if (!res.destroyed) res.end(JSON.stringify({ result }))
+    } catch (error) { if (!res.destroyed) { res.statusCode = 400; res.end(JSON.stringify({ error: error.message })) } }
   }
-  handler.dispose = () => { disposed = true; repositories.clear(); byRoot.clear(); tickets.clear() }
+  handler.dispose = () => { disposed = true; operations.close(); repositories.clear(); byRoot.clear(); tickets.clear() }
   return handler
 }

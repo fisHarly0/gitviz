@@ -3,8 +3,13 @@ const path = require('node:path')
 const fs = require('node:fs/promises')
 const { randomBytes } = require('node:crypto')
 const { GitService } = require('./git-service.cjs')
+const { OperationHost } = require('./operation-host.cjs')
+let stopActive
 
 function activate(context) {
+  const operations = new OperationHost()
+  stopActive = () => operations.close()
+  context.subscriptions.push({ dispose: stopActive })
   const documents = new Map(), services = new Map(), allowedWorktrees = new Set()
   let panel, service, requestBusy = false
   const getService = async folder => {
@@ -68,7 +73,12 @@ function activate(context) {
     if (doc.uri.scheme === 'gitviz') documents.delete(doc.uri.query)
   }))
 
-  async function handle(method, params = {}) {
+  async function handle(method, params = {}, current) {
+    const ensureActive = () => {
+      operations.assertOpen()
+      if (current && panel !== current) throw new Error('版本树面板已关闭，未开始的操作已取消。')
+    }
+    ensureActive()
     ensureTrusted()
     if (method === 'snapshot') return getSnapshot()
     if (method === 'chooseRepo') { await chooseRepo(true); return getSnapshot() }
@@ -101,15 +111,18 @@ function activate(context) {
       }
     }
     const plan = await repo.prepareAction(method, input)
+    ensureActive()
     const okay = await vscode.window.showWarningMessage(plan.preview.title, { modal: true, detail: GitService.confirmationText(plan.preview) }, plan.preview.confirmLabel)
     if (okay !== plan.preview.confirmLabel) return { cancelled: true }
+    ensureActive()
     if (needsSavedEditors) ensureSavedEditors(repo)
-    const result = await repo.executePrepared(plan)
+    const result = await operations.execute(repo, plan)
     if (result.worktree) allowedWorktrees.add(result.worktree)
     return { ...result, snapshot: await getSnapshot() }
   }
 
   async function open() {
+    operations.assertOpen()
     ensureTrusted()
     if (panel) { panel.reveal(); return }
     if (!service) await chooseRepo()
@@ -126,9 +139,16 @@ function activate(context) {
       }
       const mutation = !['snapshot', 'detail', 'compare', 'openDiff', 'historyPage', 'searchHistory', 'operations'].includes(message.method)
       if (mutation) requestBusy = true
-      try { await current.webview.postMessage({ id: message.id, result: await handle(message.method, message.params) }) }
-      catch (error) { await current.webview.postMessage({ id: message.id, error: error.message }) }
-      finally { if (mutation) requestBusy = false }
+      try {
+        const result = await handle(message.method, message.params, current)
+        if (panel === current) await current.webview.postMessage({ id: message.id, result })
+      } catch (error) { if (panel === current) await current.webview.postMessage({ id: message.id, error: error.message }) }
+      finally {
+        if (mutation) {
+          requestBusy = false
+          if (panel && panel !== current) await panel.webview.postMessage({ event: 'refresh' })
+        }
+      }
     }, undefined, context.subscriptions)
     current.onDidDispose(() => { if (panel === current) panel = undefined }, undefined, context.subscriptions)
   }
@@ -139,4 +159,5 @@ function activate(context) {
   }))
   return { getSnapshot, open }
 }
-module.exports = { activate }
+function deactivate() { stopActive?.(); stopActive = undefined }
+module.exports = { activate, deactivate }
