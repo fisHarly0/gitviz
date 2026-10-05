@@ -2,9 +2,11 @@
 
 更新时间：2026-10-05
 
-最新批次：Git CLI 生命周期收尾（基线 30a47a0）。三端超时、输出超限和搜索提前结束使用受控执行器；等待本次进程树清理及输出关闭，无法确认停止时暂停写入并保留已持有的操作锁。Windows 真实 hook 派生进程、保留现场/继续提交、父进程退出后悬挂输出测试通过；VSIX/DSH 打包后的模块也各通过 4 项进程测试。30 项 Node/布局、20 项前端、6 项 DSH 接口、4 项大历史测试通过。当前接续见 `memory/handoff-2026-10-05-git-process-lifecycle.md`；完整公开交付目标保持未完成。
+最新批次：三端写入预检对齐（基线 08240a1）。切换/恢复/编辑/续交检查稀疏检出与隐藏 index 标记；子模块 ignore 配置不能掩盖未提交修改；插件恢复的子模块、忽略文件碰撞与身份检查提前到预览；linked worktree 的六种进行中状态在预览和执行检查。Windows 真实 Git 用例通过，当前接续见 `memory/handoff-2026-10-05-write-preflight.md`；完整公开交付目标保持未完成。
 
-本批 Rust 全量回归 13/13，加测 Windows 悬挂管道 1/1、输出上限 1/1；`cargo check --release` 与桌面 release 构建通过。三端开发包和 SHA-256 在 `F:/Codex/work/gitviz-product/process-packages/`，旧 artifacts 不变。进程机制在 Windows 实测，Unix 实现尚未运行；本批没有重复三端原生 UI 冒烟，前批实装确认见 `memory/handoff-2026-10-05-confirmation-parity.md`。
+本批 Node/布局 34/34 + 新增身份预览测试 1/1，Rust 全量 19/19（含大历史与跨宿主续交），DSH HTTP 7/7，lint、主前端构建、`cargo check --release` 均通过。两个插件包在 `F:/Codex/work/gitviz-product/preflight-packages/`，解包核对测试源码并加载成功。本批未重建桌面 exe、未跑原生 UI；旧 process-packages 的 exe 不含本次改动。下一批处理执行期间外部 Git 状态变化及宿主退出，随后推进地图和发行验收。
+
+上批进程生命周期修复见 `memory/handoff-2026-10-05-git-process-lifecycle.md`：超时等待进程清理和输出关闭，无法确认停止时暂停写入并保留已有锁；普通失败保留现场并可按检查点继续。Windows 实测，Unix 未运行。
 
 ## 当前目标：公开产品交付
 

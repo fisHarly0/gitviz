@@ -76,7 +76,7 @@ pub(crate) fn snapshot(root: &Path, limit: u64) -> Result<Value, String> {
     let total = if has_history { git(root, &args)?.trim().parse::<u64>().map_err(|e|e.to_string())? } else {0};
     let next = if more || head_pinned {json!({"revision":state["revision"],"offset":offset})} else {Value::Null};
     state["repo"] = json!(root.to_string_lossy()); state["name"] = json!(root.file_name().unwrap_or_default().to_string_lossy());
-    state["dirty"] = json!(!git(root, &["status", "--porcelain=v1", "-z", "--untracked-files=all"])?.is_empty());
+    state["dirty"] = json!(!git(root, &["status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignore-submodules=none"])?.is_empty());
     state["commits"] = json!(commits); state["nextCursor"] = next.clone(); state["total"] = json!(total);
     state["limit"] = json!(count); state["headPinned"] = json!(head_pinned); state["truncated"] = json!(!next.is_null()); state["writable"] = json!(false);
     assert_revision(root, state["revision"].as_str().unwrap())?;

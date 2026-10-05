@@ -71,6 +71,21 @@ test('two-phase write does nothing before execute, binds parameters and cannot r
   assert.match((await f.call('execute', { token: plan.token }, f.repoId)).error, /已使用/)
 })
 
+test('DSH rejects sparse checkout in preview and rechecks it after confirmation', async t => {
+  const f = await fixture(t)
+  await f.git.command(['branch', 'old', f.first])
+  const { result: plan } = await f.call('prepare', { action: 'switchBranch', name: 'old', expected: f.expected }, f.repoId)
+  assert.ok(plan.token)
+  await f.git.command(['sparse-checkout', 'set', '--cone', 'empty-directory'])
+  const rejected = await f.call('execute', { token: plan.token }, f.repoId)
+  assert.equal(rejected.status, 400); assert.match(rejected.error, /稀疏/)
+  const preview = await f.call('prepare', { action: 'restore', oid: f.first, expected: f.expected }, f.repoId)
+  assert.equal(preview.status, 400); assert.match(preview.error, /稀疏/)
+  assert.equal(await f.git.head(), f.expected.head); assert.equal(await f.git.branch(), 'main')
+  assert.equal((await f.git.operations()).records.length, 0)
+  assert.equal(await fs.readFile(path.join(f.root, '中文.txt'), 'utf8'), 'second\n')
+})
+
 test('DSH switch ticket binds the target branch revision and cannot be changed by execute parameters', async t => {
   const f = await fixture(t)
   await f.git.command(['branch', 'target', f.first])

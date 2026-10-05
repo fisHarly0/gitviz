@@ -53,10 +53,10 @@ fn branch_name(root: &Path, name: &str) -> Result<(), String> {
 fn guard(root: &Path, expected: &Expected, clean: bool) -> Result<(), String> {
     if canonical(root)? != canonical(Path::new(&expected.repo))? { return Err("当前仓库已变化，请重新预览操作。".into()); }
     if head(root)? != expected.head || branch(root) != expected.branch { return Err("当前分支或 HEAD 已变化，请刷新后重试。".into()); }
-    if clean && !git(root, &["status", "--porcelain=v1", "-z", "--untracked-files=all"])?.is_empty() { return Err("工作区有未提交或未跟踪文件，请先提交或暂存到 stash。".into()); }
+    if clean && !git(root, &["status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignore-submodules=none"])?.is_empty() { return Err("工作区有未提交或未跟踪文件，请先提交或暂存到 stash。".into()); }
     for marker in ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply", "sequencer"] {
         let file = git(root, &["rev-parse", "--git-path", marker])?;
-        if root.join(file.trim()).exists() { return Err("仓库正在合并、变基或挑选提交，请先完成或中止。".into()); }
+        if root.join(file.trim()).try_exists().map_err(|e|format!("无法检查 Git 操作状态：{e}"))? { return Err("仓库正在合并、变基或挑选提交，请先完成或中止。".into()); }
     }
     Ok(())
 }
@@ -88,7 +88,10 @@ pub(crate) fn edit_path(root: &Path, value: &str) -> Result<PathBuf, String> {
 
 fn identity(root: &Path) -> Result<(), String> { git(root, &["var", "GIT_AUTHOR_IDENT"])?; git(root, &["var", "GIT_COMMITTER_IDENT"])?; Ok(()) }
 fn full_checkout(root: &Path) -> Result<(), String> {
-    if git(root, &["config", "--bool", "core.sparseCheckout"]).unwrap_or_default().trim() == "true" { return Err("稀疏检出仓库暂不支持此写操作。".into()); }
+    if git(root, &["config", "--bool", "--default=false", "--get", "core.sparseCheckout"])?.trim() == "true" { return Err("稀疏检出仓库暂不支持此操作，请先在 Git 中恢复完整检出。".into()); }
+    if git(root, &["ls-files", "-v", "-z"])?.split('\0').any(|entry| entry.as_bytes().first().is_some_and(|b| *b == b'S' || b.is_ascii_lowercase())) {
+        return Err("暂存区包含 skip-worktree 或 assume-unchanged 标记，可能隐藏文件改动。请先在 Git 中检查并处理这些标记。".into());
+    }
     Ok(())
 }
 
@@ -104,7 +107,7 @@ fn check_checkpoint(root: &Path, record: &Value, expected: &Expected) -> Result<
         branch_name(root,backup)?;
         if git(root,&["rev-parse","--verify",&format!("refs/heads/{backup}")])?.trim() != expected.head { return Err("备份引用已变化，请先检查恢复前的位置。".into()); }
     }
-    git(root,&["diff","--cached","--quiet","--no-ext-diff","--no-textconv",tree,"--"]).map_err(|_|"暂存区与失败时的检查点不同，请先检查差异；不会提交新增改动。".to_owned())?;
+    git(root,&["diff","--cached","--quiet","--no-ext-diff","--no-textconv","--ignore-submodules=none",tree,"--"]).map_err(|_|"暂存区与失败时的检查点不同，请先检查差异；不会提交新增改动。".to_owned())?;
     git(root,&["diff","--quiet","--no-ext-diff","--no-textconv","--ignore-submodules=none","--"]).map_err(|_|"工作文件在失败后发生变化，请先检查差异；不会自动暂存。".to_owned())?;
     if !git(root,&["ls-files","--others","--exclude-standard","-z"])?.is_empty() { return Err("存在未跟踪文件，请先处理后再继续提交。".into()); }
     Ok(())
@@ -357,6 +360,86 @@ mod tests {
             ops.execute(&self.root, plan["token"].as_str().unwrap())
         }
         fn save(&self, content: &str) -> Action { Action::SaveEdit { path: "中文.txt".into(), content: content.into(), message: "edit safely".into() } }
+    }
+    #[test]
+    fn preflight_sparse_checkout_rejects_preview_and_confirmation_without_touching_files() {
+        let f = Fixture::new(); let mut ops = Operations::default();
+        git(&f.root, &["branch", "other", &f.first]).unwrap();
+        let plan = ops.prepare(&f.root, f.expected(), Action::SwitchBranch { name: "other".into() }).unwrap();
+        git(&f.root, &["sparse-checkout", "set", "--cone", "empty-directory"]).unwrap();
+        let index = fs::read(f.root.join(".git/index")).unwrap();
+        assert!(ops.execute(&f.root, plan["token"].as_str().unwrap()).unwrap_err().contains("稀疏"));
+        for action in [Action::SwitchBranch { name: "other".into() }, Action::Restore { oid: f.first.clone() }, f.save("blocked\n")] {
+            assert!(ops.prepare(&f.root, f.expected(), action).unwrap_err().contains("稀疏"));
+        }
+        assert_eq!(fs::read(f.root.join(".git/index")).unwrap(), index);
+        assert_eq!(head(&f.root).unwrap(), f.latest); assert_eq!(branch(&f.root), "main");
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "second\n");
+        assert!(!f.root.join(".git/gitviz/operations").exists());
+        f.perform(Action::CreateBranch { name: "sparse-safe".into(), oid: f.first.clone() }).unwrap();
+        assert_eq!(head(&f.root).unwrap(), f.latest);
+        // Invalid configuration is an error, never equivalent to full checkout.
+        git(&f.root, &["config", "core.sparseCheckout", "invalid-boolean"]).unwrap();
+        assert!(full_checkout(&f.root).is_err());
+    }
+    #[test]
+    fn preflight_index_flags_cannot_hide_worktree_changes() {
+        let f = Fixture::new(); let mut ops = Operations::default();
+        git(&f.root, &["branch", "other", &f.first]).unwrap();
+        for flag in ["assume-unchanged", "skip-worktree"] {
+            let plan = ops.prepare(&f.root, f.expected(), Action::SwitchBranch { name: "other".into() }).unwrap();
+            git(&f.root, &["update-index", &format!("--{flag}"), "--", "中文.txt"]).unwrap();
+            fs::write(f.root.join("中文.txt"), "hidden change\n").unwrap();
+            assert!(git(&f.root, &["status", "--porcelain"]).unwrap().is_empty());
+            let index = fs::read(f.root.join(".git/index")).unwrap();
+            assert!(ops.execute(&f.root, plan["token"].as_str().unwrap()).unwrap_err().contains("标记"));
+            assert!(ops.prepare(&f.root, f.expected(), Action::Restore { oid: f.first.clone() }).unwrap_err().contains("标记"));
+            assert_eq!(fs::read(f.root.join(".git/index")).unwrap(), index);
+            assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "hidden change\n");
+            assert_eq!(head(&f.root).unwrap(), f.latest); assert_eq!(branch(&f.root), "main");
+            fs::write(f.root.join("中文.txt"), "second\n").unwrap();
+            git(&f.root, &["update-index", &format!("--no-{flag}"), "--", "中文.txt"]).unwrap();
+        }
+        assert!(!f.root.join(".git/gitviz/operations").exists());
+    }
+    #[test]
+    fn preflight_submodule_ignore_cannot_hide_dirty_files_or_allow_tree_restore() {
+        let f = Fixture::new(); let nested = Fixture::new(); let mut ops = Operations::default();
+        git(&f.root, &["-c", "protocol.file.allow=always", "submodule", "add", nested.root.to_str().unwrap(), "module"]).unwrap();
+        git(&f.root, &["commit", "-am", "with module"]).unwrap();
+        let expected = f.expected();
+        git(&f.root, &["branch", "other", &expected.head]).unwrap();
+        assert!(ops.prepare(&f.root, f.expected(), Action::Restore { oid: f.first.clone() }).unwrap_err().contains("子模块"));
+        let plan = ops.prepare(&f.root, f.expected(), Action::SwitchBranch { name: "other".into() }).unwrap();
+        git(&f.root, &["config", "submodule.module.ignore", "all"]).unwrap();
+        git(&f.root, &["config", "diff.ignoreSubmodules", "all"]).unwrap();
+        fs::write(f.root.join("module/中文.txt"), "keep nested change\n").unwrap();
+        assert!(git(&f.root, &["status", "--porcelain"]).unwrap().is_empty());
+        assert!(ops.execute(&f.root, plan["token"].as_str().unwrap()).unwrap_err().contains("未提交"));
+        assert!(ops.prepare(&f.root, f.expected(), Action::SwitchBranch { name: "other".into() }).unwrap_err().contains("未提交"));
+        assert_eq!(head(&f.root).unwrap(), expected.head); assert_eq!(branch(&f.root), "main");
+        assert_eq!(fs::read_to_string(f.root.join("module/中文.txt")).unwrap(), "keep nested change\n");
+        assert!(!f.root.join(".git/gitviz/operations").exists());
+    }
+    #[test]
+    fn preflight_linked_worktree_markers_are_checked_before_preview_and_execution() {
+        let f = Fixture::new(); let folder = f.root.with_extension("linked");
+        git(&f.root, &["worktree", "add", "-b", "linked", folder.to_str().unwrap(), &f.latest]).unwrap();
+        let expected = Expected { repo: folder.to_string_lossy().into_owned(), head: f.latest.clone(), branch: "linked".into() };
+        let mut ops = Operations::default();
+        for marker in ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply", "sequencer"] {
+            let action = || Action::CreateBranch { name: "blocked".into(), oid: f.first.clone() };
+            let plan = ops.prepare(&folder, expected.clone(), action()).unwrap();
+            let file = folder.join(git(&folder, &["rev-parse", "--git-path", marker]).unwrap().trim());
+            let directory = matches!(marker, "rebase-merge" | "rebase-apply" | "sequencer");
+            if directory { fs::create_dir(&file).unwrap(); } else { fs::write(&file, format!("{}\n", f.first)).unwrap(); }
+            assert!(ops.execute(&folder, plan["token"].as_str().unwrap()).unwrap_err().contains("合并、变基"));
+            assert!(ops.prepare(&folder, expected.clone(), action()).unwrap_err().contains("合并、变基"));
+            if directory { fs::remove_dir(&file).unwrap(); } else { fs::remove_file(&file).unwrap(); }
+        }
+        assert_eq!(head(&folder).unwrap(), f.latest);
+        assert!(git(&folder, &["show-ref", "--verify", "refs/heads/blocked"]).is_err());
+        assert!(journal::list(&folder, None, 30).unwrap()["records"].as_array().unwrap().is_empty());
     }
     #[test]
     fn switch_fork_and_save_sync_real_files_index_and_user_identity() {

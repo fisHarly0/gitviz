@@ -30,7 +30,7 @@ class GitService {
 
   async head() { return (await this.command(['rev-parse', '--verify', 'HEAD'])).trim() }
   async branch() { return (await this.command(['symbolic-ref', '--quiet', '--short', 'HEAD']).catch(() => '')).trim() }
-  async status() { return this.command(['status', '--porcelain=v1', '-z', '--untracked-files=all']) }
+  async status() { return this.command(['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=none']) }
   async assertOid(oid) {
     if (typeof oid !== 'string' || !OID.test(oid)) throw new Error('无效的提交编号。请刷新版本树后重试。')
     if ((await this.command(['cat-file', '-t', oid])).trim() !== 'commit') throw new Error('节点不是 Git 提交。')
@@ -172,7 +172,7 @@ class GitService {
     if (clean && await this.status()) throw new Error('工作区有未提交或未跟踪文件。请先提交或暂存到 stash，再执行此操作。')
     for (const marker of ['MERGE_HEAD', 'CHERRY_PICK_HEAD', 'REVERT_HEAD', 'rebase-merge', 'rebase-apply', 'sequencer']) {
       const file = (await this.command(['rev-parse', '--git-path', marker])).trim()
-      if (await fs.stat(path.resolve(this.root, file)).catch(() => null)) throw new Error('仓库正在合并、变基或挑选提交。请先完成或中止该操作。')
+      if (await fs.stat(path.resolve(this.root, file)).catch(error => { if (error.code === 'ENOENT') return null; throw error })) throw new Error('仓库正在合并、变基或挑选提交。请先完成或中止该操作。')
     }
   }
 
@@ -224,8 +224,8 @@ class GitService {
       await this.validateBranch(record.backup)
       if ((await this.command(['rev-parse', '--verify', `refs/heads/${record.backup}`])).trim() !== expected.head) throw new Error('备份引用已变化，请先检查恢复前的位置。')
     }
-    if ((await this.command(['config', '--bool', 'core.sparseCheckout']).catch(() => '')).trim() === 'true') throw new Error('稀疏检出仓库暂不支持继续提交。')
-    await this.command(['diff', '--cached', '--quiet', '--no-ext-diff', '--no-textconv', tree, '--']).catch(() => { throw new Error('暂存区与失败时的检查点不同，请先检查差异；不会提交新增改动。') })
+    await this.fullCheckout()
+    await this.command(['diff', '--cached', '--quiet', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', tree, '--']).catch(() => { throw new Error('暂存区与失败时的检查点不同，请先检查差异；不会提交新增改动。') })
     await this.command(['diff', '--quiet', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '--']).catch(() => { throw new Error('工作文件在失败后发生变化，请先检查差异；不会自动暂存。') })
     if (await this.command(['ls-files', '--others', '--exclude-standard', '-z'])) throw new Error('存在未跟踪文件，请先处理后再继续提交。')
     await this.command(['var', 'GIT_AUTHOR_IDENT']); await this.command(['var', 'GIT_COMMITTER_IDENT'])
@@ -251,11 +251,32 @@ class GitService {
     if (name.includes('@{')) throw new Error('分支名不能包含引用表达式。')
   }
 
+  async fullCheckout() {
+    if ((await this.command(['config', '--bool', '--default=false', '--get', 'core.sparseCheckout'])).trim() === 'true') throw new Error('稀疏检出仓库暂不支持此操作，请先在 Git 中恢复完整检出。')
+    const entries = (await this.command(['ls-files', '-v', '-z'])).split('\0')
+    if (entries.some(entry => /^[a-zS] /.test(entry))) throw new Error('暂存区包含 skip-worktree 或 assume-unchanged 标记，可能隐藏文件改动。请先在 Git 中检查并处理这些标记。')
+  }
+
+  async checkRestore(oid, expected) {
+    await this.fullCheckout()
+    if (!expected.branch) throw new Error('当前处于游离 HEAD。请先创建并切换到分支。')
+    const targetTree = await this.command(['ls-tree', '-r', '-z', oid])
+    const currentTree = await this.command(['ls-tree', '-r', '-z', expected.head])
+    if (/(^|\0)160000 /.test(targetTree + '\0' + currentTree)) throw new Error('包含子模块的版本暂不支持整树恢复。')
+    if (!(await this.files(expected.head, oid)).length) throw new Error('这个存档与当前版本的文件内容相同，无需恢复。')
+    const ignored = (await this.command(['ls-files', '--others', '--ignored', '--exclude-standard', '-z'])).split('\0').filter(Boolean)
+    const targetPaths = targetTree.split('\0').filter(Boolean).map(entry => entry.slice(entry.indexOf('\t') + 1))
+    const collision = ignored.find(file => targetPaths.some(target => file === target || file.startsWith(target + '/') || target.startsWith(file + '/')))
+    if (collision) throw new Error(`恢复会覆盖被忽略的文件 ${collision}。请先移走该文件。`)
+    await this.command(['var', 'GIT_AUTHOR_IDENT']); await this.command(['var', 'GIT_COMMITTER_IDENT'])
+  }
+
   async prepareAction(action, params = {}) {
     if (!['createBranch', 'switchBranch', 'createWorktree', 'restore', 'resumeCommit'].includes(action)) throw new Error('不支持的 Git 操作。')
     const initial = await this.historyState()
     const expected = { repo: this.root, head: params.expected?.head, branch: params.expected?.branch, revision: initial.revision }
     await this.guard(expected, ['switchBranch', 'restore'].includes(action))
+    if (action === 'switchBranch') await this.fullCheckout()
     const operation = { action, expected }
     let target, recovery
     if (action === 'resumeCommit') {
@@ -280,6 +301,7 @@ class GitService {
         operation.directory = path.resolve(params.directory)
       }
     }
+    if (action === 'restore') await this.checkRestore(target, expected)
     const files = recovery
       ? (await this.command(['diff', '--cached', '--name-only', '-z', '--'])).split('\0').filter(Boolean)
       : (await this.command(['diff', '--name-only', '-z', expected.head, target, '--'])).split('\0').filter(Boolean)
@@ -339,6 +361,7 @@ class GitService {
   async switchBranch(name, expected) {
     return this.exclusive(async () => {
       await this.validateBranch(name); await this.guard(expected)
+      await this.fullCheckout()
       await this.command(['show-ref', '--verify', `refs/heads/${name}`])
       return this.recorded('switchBranch', { name }, expected, async () => {
         await this.command(['switch', '--no-guess', '--no-overwrite-ignore', '--', name])
@@ -364,20 +387,7 @@ class GitService {
   async restore(oid, expected) {
     return this.exclusive(async () => {
       await this.assertOid(oid); await this.guard(expected)
-      if (!expected.branch) throw new Error('当前处于游离 HEAD。请先创建并切换到分支。')
-      const sparse = (await this.command(['config', '--bool', 'core.sparseCheckout']).catch(() => '')).trim()
-      if (sparse === 'true') throw new Error('稀疏检出仓库暂不支持整树恢复。')
-      const targetTree = await this.command(['ls-tree', '-r', '-z', oid])
-      const currentTree = await this.command(['ls-tree', '-r', '-z', expected.head])
-      if (/(^|\0)160000 /.test(targetTree + '\0' + currentTree)) throw new Error('包含子模块的版本暂不支持整树恢复。')
-      const changes = await this.files(expected.head, oid)
-      if (!changes.length) throw new Error('这个存档与当前版本的文件内容相同，无需恢复。')
-      const ignored = (await this.command(['ls-files', '--others', '--ignored', '--exclude-standard', '-z'])).split('\0').filter(Boolean)
-      const targetPaths = targetTree.split('\0').filter(Boolean).map(entry => entry.slice(entry.indexOf('\t') + 1))
-      const collision = ignored.find(file => targetPaths.some(target => file === target || file.startsWith(target + '/') || target.startsWith(file + '/')))
-      if (collision) throw new Error(`恢复会覆盖被忽略的文件 ${collision}。请先移走该文件。`)
-      // Check identity before touching the worktree. Hooks may still fail; keep their output intact.
-      await this.command(['var', 'GIT_AUTHOR_IDENT']); await this.command(['var', 'GIT_COMMITTER_IDENT'])
+      await this.checkRestore(oid, expected)
       return this.recorded('restore', { oid }, expected, async record => {
       const backup = `gitviz/backup-${new Date().toISOString().replace(/[-:.TZ]/g, '')}-${randomUUID().slice(0, 6)}`
       record.backup = backup; await this.journal.save(record)
