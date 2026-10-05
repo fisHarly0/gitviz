@@ -109,13 +109,37 @@
   "status": "development-validation-only",
   "runUrl": "https://github.com/fisHarly0/gitviz/actions/runs/37283842186",
   "remainingReleaseGates": [
-    "installed desktop write and recovery smoke",
-    "desktop 0.2.0 portable to 0.3.0 installer data continuity",
     "multi-host native concurrency",
     "first-use UX and missing Git recovery",
     "Linux/macOS native UI",
     "final release packages and supported platform declaration"
   ],
+  "desktopPortableUpgrade": {
+    "platform": "Windows",
+    "from": "0.2.0 portable",
+    "to": "0.3.0 NSIS",
+    "source": "51a873c3b4430e8665c7a1b9241c30eae2902a47",
+    "historicalCommits": 2000,
+    "sharedIsolatedWebViewProfile": true,
+    "defaultUserAppDataMigrationTested": false,
+    "storageAndGitStatePreserved": true,
+    "installedWriteAndRecoveryAfterNormalRestart": true,
+    "uninstallPreservedExternalDataAndOriginalPortable": true,
+    "oldSHA256": "81fbd701aac9f305af9c6765f157871323045064225b3e2f293a9883bf2eb6ce",
+    "installedSHA256": "9dee2393407b6dd66f4e96151abeffd2c2780c4707cd005306ca7bf5e375e5a9",
+    "binaryComparison": {
+      "referenceSHA256": "9069fc4ea99dd7240f343e5abfd4c656957ec35bd4d451a71c726fa369d332cf",
+      "bundleMarker": "UNK -> NSS",
+      "markerOffset": 10085416,
+      "allOtherBytesIdentical": true
+    }
+  },
+  "testCleanupFollowup": {
+    "run": 37288709393,
+    "source": "f1fe193b5a180b74fc184507fda0a77143602616",
+    "allThreePlatformsPassed": true,
+    "productionUncertainCleanupRootCauseResolved": false
+  },
   "dshUpgrade": {
     "host": "DeepSeek Harness 0.2.0-rc.2 Web on Windows",
     "from": "0.2.0",

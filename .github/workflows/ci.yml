@@ -106,7 +106,7 @@ jobs:
         run: |
           $installer = @(Get-ChildItem -LiteralPath 'src-tauri/target/release/bundle/nsis' -Filter '*-setup.exe')
           if ($installer.Count -ne 1) { throw 'Expected exactly one NSIS installer' }
-          ./scripts/test-windows-installer.ps1 -Installer $installer[0].FullName -TestRoot "$env:RUNNER_TEMP/gitviz-install-smoke"
+          ./scripts/test-windows-installer.ps1 -Installer $installer[0].FullName -TestRoot "$env:RUNNER_TEMP/gitviz-install-smoke" -ExpectedExecutable 'src-tauri/target/release/gitviz.exe'
       - name: Collect native artifacts
         shell: pwsh
         run: |

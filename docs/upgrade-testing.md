@@ -48,6 +48,28 @@ Windows 的 DeepSeek Harness 0.2.0-rc.2 Web profile 已实测原 0.2.0 tarball �
 
 本轮只使用合成仓库，没有模型调用；pnpm store 位于 F 盘。自己的 DSH 服务已停止，承载页面的 VS Code 已通过 File → Exit 退出，3087/9235 监听已释放。
 
+## Windows 免安装 0.2.0 → NSIS 0.3.0
+
+原 `artifacts/gitviz-0.2.0.exe` 与提交 `51a873c` 的 CI 安装包已完成真实桌面验收。使用同一个显式隔离的 `WEBVIEW2_USER_DATA_FOLDER`，两版 origin 均为 `http://tauri.localhost`，核对旧偏好值和测试标记保留。这验证存储兼容，不表示在用户默认 AppData 中执行了迁移，也不表示新地图已经采用旧横向偏好。
+
+- 同一合成仓库包含 2000 条提交及分叉/合并；两版均从首批 300 连续加载到全部 2000，键盘定位最早提交。升级与浏览前后 HEAD、引用、index 字节和工作文件不变。
+- 安装版确认框核对仓库、实际 HEAD 缩写和完整目标提交；取消不产生记录或 Git 写入。真实 pre-commit hook 拒绝恢复提交后保留备份和检查点。
+- 正常关闭安装版并重启，同一失败记录原样保留；取消继续不改 index 和尝试次数。移除测试 hook 后，从界面确认继续，核对目标 tree、原 HEAD 为父提交、备份、作者、清洁状态及同一记录两次尝试完成。
+- 卸载后安装程序与注册记录消失，外部仓库、隔离 WebView 数据和原免安装 exe 保留。失败记录由新版创建；旧版没有新版操作记录，不声称迁移旧日志。
+
+```powershell
+./scripts/test-desktop-upgrade.ps1 `
+  -OldExecutable 'F:/gitviz/artifacts/gitviz-0.2.0.exe' `
+  -Installer 'F:/Codex/work/gitviz-product/delivery-ci-windows-51a873c/gitviz_0.3.0_x64-setup.exe' `
+  -ExpectedInstalledExecutable 'F:/Codex/work/gitviz-product/delivery-ci-windows-51a873c/gitviz-windows-x64.exe' `
+  -TestRoot 'F:/Codex/work/gitviz-product/new-desktop-upgrade-test' `
+  -PlaywrightCorePath 'F:/gitviz-work/browser-check/node_modules/playwright-core'
+```
+
+路径按实际产物替换；需 PowerShell 7、Node、Git 和已有 Playwright Core，仅连接原生 WebView2。`TestRoot` 必须不存在，检测到已有 Gitviz 安装或 9348 端口占用时拒绝执行。脚本正常关闭自己的应用、卸载测试安装并恢复临时环境变量。
+
+实测证据：`F:/Codex/work/gitviz-product/desktop upgrade confirmed/` 中三阶段 `result-*.json`、PNG、确认文本、失败检查点及 `desktop-migration-result.json`。安装程序和 raw exe 的 SHA 见发行验证清单；安装后的 exe 仅存在 Tauri NSIS 已知类型标记差异，其他字节全部一致，校验方式见 [工程交付说明](delivery.md)。加入该校验的首次安装/重装驱动也在 `installer-payload-check/` 完整通过。
+
 ## 仍需验收
 
-桌面免安装旧版到 NSIS 的用户数据衔接、已安装桌面的写入/恢复冒烟，以及其他操作系统的原生 UI 尚未因本页证据关闭。签名、公证和正式外部发布也不在上述检查范围内。
+三宿主原生并发、首次使用与缺少 Git 的恢复，以及其他操作系统的原生 UI 仍需验收。用户默认 AppData 的实际迁移、签名、公证和正式外部发布不在上述检查范围内。

@@ -4,6 +4,14 @@
 
 ## 最新接续（本节优先于历史记录）
 
+- 本批基线 f1fe193，桌面升级和安装内容校验。原 0.2.0 portable → 51a873c CI NSIS 0.3.0，在共享隔离 WebView profile 上完成 old/upgraded/restarted 三阶段真实 UI。2000 条历史全部加载和 End 定位、升级前后 Git 不变、取消不写、hook 失败、正常关闭重启同一记录继续、parent/tree/backup/author/clean 均通过。只验证隔离 profile 兼容；不声称用户默认 AppData 已迁移，也不声称新版地图采用旧 orientation 偏好。
+- 最终证据 `F:/Codex/work/gitviz-product/desktop upgrade confirmed/` 与日志 desktop-upgrade-confirmed.log。新增 `tests/desktop-upgrade-smoke.cjs`、`scripts/test-desktop-upgrade.ps1`。截图已查看；恢复后的历史错误保留于操作记录、实际 HEAD 已更新。早期测试误要求旧版不存在的路径 header、确认框完整当前 SHA，已按真实 UI 契约改为旧版只读 IPC 核对路径及当前 HEAD 七位缩写，完整目标 SHA 仍校验。
+- 安装 exe 与 raw exe 只有 bundle marker 的 UNK → NSS 三字节差异，版本对应 Tauri 官方源码确认。新增 `scripts/check-installed-binary.mjs` 校验唯一标记和整个 buffer；真实文件通过、任意其他字节损坏负例被拒。`scripts/test-windows-installer.ps1` 和 Windows CI 加入该门禁，首次安装/重装在 `installer-payload-check/` 本机复验通过。原 raw SHA9069…与安装 SHA9dee…分开记录在发行验证 JSON。
+- lint、前端 build 通过；未修改生产前端/Rust，无需重跑 Rust。桌面测试应用已正常关闭，两个驱动都完成卸载；9347/9348 无监听，Gitviz HKCU 安装记录为零。本机会话 68890、21441 均 exit0。
+- 已核实 f1fe193 / CI37288709393 三系统全部成功，关闭测试 taskkill128 收尾复验项；不把它等同于生产未知清理根因修复。本批提交后跟踪新增安装字节门禁的 CI。下一模块 P1 多宿主同仓库完整原生并发，再处理 P2 首次使用、缺少Git、其他平台/发行边界；不重跑已经通过的插件升级。
+
+## 上批 DSH 升级与测试收尾（历史）
+
 - 基线 b708b5e；本轮 DSH 原0.2.0 → CI51a873c的0.3.0三阶段实际升级/重启恢复通过，详见 docs/upgrade-testing.md。测试源码 tests/dsh-upgrade-smoke.cjs、tests/helpers/dsh-client-source.cjs；所有写入均在新建合成仓库。
 - 证据 F:/Codex/work/gitviz-product/dsh-upgrade-030/result-{old,upgraded,restarted}.json、同阶段截图及 served-client-verification.json。浏览器使用隔离VSCode Integrated Browser，DSH_HOME 为 scratch/home。CLI plugin add 保持bundle唯一，逐文件包SHA、实际客户端资源、新版hook失败重启后同一记录续交、parent/tree/backup/clean全部核对。服务重启是操作完成后停止自己的Node进程再启动；同一浏览器标签页保留，未声称跨关闭浏览器保存sessionStorage。
 - 首次页面遇到延迟出现的模型设置弹窗，测试等待后选择“稍后配置”；服务日志尚未输出启动URL时增加有界等待，复用同一新服务重试，没有因观察超时另开服务。实际截图已查看。客户端返回值是原始client.js加source-map注释，helper已独立在当前真实页面通过。

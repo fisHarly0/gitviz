@@ -17,6 +17,8 @@
 
 Windows 安装冒烟使用全新的临时目录与 WebView 数据，截图和结果单独保存为 `gitviz-install-evidence-*`。它会拒绝覆盖已有 Gitviz 安装，并核对浏览没有修改仓库；同版本重装不等于跨版本升级。这份工作流尚不包含 VS Code/DSH 可视化宿主、跨版本升级、签名或公证测试。Linux/macOS 的程序编译与后端测试也不能证明其原生 UI 已验收。真实运行结果以 [Actions](https://github.com/fisHarly0/gitviz/actions/workflows/ci.yml) 对应提交为准。
 
+Windows CI 还会在首次安装与重装后，将安装后的 exe 与同次构建的 raw exe 按字节比较。Tauri 2.11.2 打包 NSIS 会把唯一的 `__TAURI_BUNDLE_TYPE_VAR_UNK` 改为 `__TAURI_BUNDLE_TYPE_VAR_NSS`，然后恢复 raw exe，见 [版本对应源码](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.2/crates/tauri-bundler/src/bundle.rs)。`scripts/check-installed-binary.mjs` 只允许这一位置的变化，其他任何字节差异均失败，不改写文件。两份 exe 的 SHA 因而不同；产物 SHA 仍分别严格核对。本机首次安装/重装已通过该检查，其他字节损坏的负例也按预期失败。
+
 2026-10-05 实测提交 `51a873c` 的 [三系统流水线](https://github.com/fisHarly0/gitviz/actions/runs/37283842186) 全部成功。下载后的 manifest、SHA、插件内容、Unix 程序权限和 Windows 安装证据已核对。构建清单见 [0.3.0 验证产物](releases/0.3.0-validation.json)；其中源提交是验证构建来源，后续仅测试/文档提交不会改变这批包。之前的 Windows 偶发超时清理失败未确认根因，按 [进程说明](git-processes.md) 保留风险。
 
 ## 版本与本机产物
@@ -37,7 +39,7 @@ npm run desktop:bundle -- --ci --bundles nsis
 
 NSIS 输出在 `src-tauri/target/release/bundle/nsis/`；免安装程序在 `src-tauri/target/release/gitviz.exe`。`useLocalToolsDir` 让打包工具缓存在项目的 `target/.tauri/`，避免本机默默写到 C 盘。将选定原生产物复制到 `GITVIZ_ARTIFACTS_DIR` 后运行 `npm run artifacts:manifest`。
 
-本机 Windows 安装验证使用 PowerShell 7 与 Node 24：`./scripts/test-windows-installer.ps1 -Installer <安装包绝对路径> -TestRoot <尚不存在的绝对测试目录>`。脚本安装后启动原生程序，读取合成仓库，验证重装保留 WebView 数据，最后卸载并保留测试证据。2026-10-05 的本机 0.3.0 NSIS 已通过这些步骤；CI 37283842186 的干净 Windows runner 随后也通过；旧版本衔接另行验收。
+本机 Windows 安装验证使用 PowerShell 7 与 Node 24：`./scripts/test-windows-installer.ps1 -Installer <安装包绝对路径> -TestRoot <尚不存在的绝对测试目录> -ExpectedExecutable <同次构建的raw-exe绝对路径>`。脚本安装后校验程序字节、启动原生程序并读取合成仓库，验证重装保留 WebView 数据，最后卸载并保留测试证据。2026-10-05 的本机 0.3.0 NSIS 已通过这些步骤；CI 37283842186 的干净 Windows runner 通过初版安装流程。旧 0.2.0 免安装到新版 NSIS 的隔离数据衔接和安装版写入/重启恢复也已本机验证，见升级说明。
 
 `build-manifest.json` 记录源提交、工作树是否修改、平台、Node/Rust 及每个产物的大小和 SHA-256；`SHA256SUMS.txt` 也覆盖 manifest 本身。工作树 dirty 的产物不能冒充该提交的干净发行。
 

@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Installer, [Parameter(Mandatory)][string]$TestRoot)
+param([Parameter(Mandatory)][string]$Installer, [Parameter(Mandatory)][string]$TestRoot, [string]$ExpectedExecutable)
 $ErrorActionPreference = 'Stop'
 if (!$IsWindows) { throw 'Windows installer test only' }
 $package = (Resolve-Path -LiteralPath $Installer).Path
@@ -33,6 +33,11 @@ try {
     $candidate = [IO.Path]::GetFullPath($candidate)
     if (!$candidate.StartsWith($destination + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Uninstaller escaped test installation' }
     $uninstaller = $candidate
+    if ($ExpectedExecutable) {
+      $comparison = & node (Join-Path $PSScriptRoot 'check-installed-binary.mjs') $ExpectedExecutable $executable
+      if ($LASTEXITCODE -ne 0) { throw 'Installed executable failed the Tauri NSIS byte comparison' }
+      $comparison | Set-Content -LiteralPath (Join-Path $scratch "installed-binary-$phase.json")
+    }
     $env:GITVIZ_INSTALL_TEST_PHASE = $phase
     $application = Start-Process -FilePath $executable -WindowStyle Hidden -PassThru
     & node (Join-Path $PSScriptRoot '../tests/installed-desktop-smoke.mjs')
