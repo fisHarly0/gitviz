@@ -109,7 +109,6 @@
   "status": "development-validation-only",
   "runUrl": "https://github.com/fisHarly0/gitviz/actions/runs/37283842186",
   "remainingReleaseGates": [
-    "multi-host native concurrency",
     "first-use UX and missing Git recovery",
     "Linux/macOS native UI",
     "final release packages and supported platform declaration"
@@ -139,6 +138,25 @@
     "source": "f1fe193b5a180b74fc184507fda0a77143602616",
     "allThreePlatformsPassed": true,
     "productionUncertainCleanupRootCauseResolved": false
+  },
+  "installerPayloadComparisonFollowup": {
+    "run": 37291219864,
+    "source": "0ee1c38f75c510c93c69d02e47bde3feec8ecb61",
+    "allThreePlatformsPassed": true,
+    "firstInstallAndReinstallOnlyKnownMarkerDifference": true,
+    "evidenceDownloadedAndChecked": true
+  },
+  "nativeConcurrency": {
+    "platform": "Windows",
+    "hosts": ["desktop", "VS Code 1.131.0", "DSH 0.2.0-rc.2 Web"],
+    "eachHostWroteRejectedConcurrentAndRejectedStale": true,
+    "sameGitRevisionJournalRefresh": true,
+    "dshFailedCommitResumedByDesktop": true,
+    "desktopExecutableSHA256": "1e40060fb74a7d7678ca32a2cc86c1af778d25ea6331888089445062017745cc",
+    "desktopSource": "local rebuild from 0ee1c38 plus src/App.jsx journal refresh fix; earlier listed CI packages do not include this fix",
+    "pluginSource": "51a873c",
+    "normalHostCloseTested": false,
+    "evidence": "docs/native-concurrency-testing.md"
   },
   "dshUpgrade": {
     "host": "DeepSeek Harness 0.2.0-rc.2 Web on Windows",

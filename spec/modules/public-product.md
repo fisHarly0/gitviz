@@ -47,7 +47,8 @@
 - [x] 插件已确认操作交给独立进程：Windows 真实 Node/Electron 宿主退出后完成，实装 VSIX 关闭/重开面板及退出整个 VS Code 后恢复完成；迟到确认接缝测试与 DSH 停用 HTTP 边界通过。强杀执行进程/整棵树和断电不保证完成。
 - [x] Windows 三端原生失败流程：worktree 占用、确认后 index 锁、真实 ACL 拒绝、hook 失败与继续；核对原状态/备份/检查点及继续后的 parent/tree/clean。桌面成功恢复后不再残留旧分支错误。
 - [x] DSH 原生插件管理页在 hook 执行中停用：侧栏/样式释放，独立进程完成、释放锁，重启用显示持久完成记录。
-- [ ] 多宿主同时操作的完整原生流程及其他平台验证仍需补充，再审查上方 P1；当前 Windows 错误流程不替代所有并发或发行验收。
+- [x] Windows 三宿主同仓库完整原生并发：轮换写入者、占用期间的竞争者及完成后的旧确认者，验证拒绝不改锁/HEAD/refs/index/文件/记录，唯一提交 parent/tree/backup/clean 正确。三端刷新展示同一完成记录；桌面补齐记录刷新联动，额外验证 Git revision 不变时能读取 DSH 的失败记录并继续。范围见 `docs/native-concurrency-testing.md`，不代表外部 Git 原子隔离或穷举所有操作组合。
+- [ ] 结合已有证据最终审查上方 P1；其他平台原生 UI、首次使用与最终发行包验收仍需完成。
 
 本批详情：`memory/handoff-2026-10-05-public-product-p1.md`。以上证据只覆盖首批，不代表整个公开交付目标完成。
 

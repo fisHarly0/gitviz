@@ -230,7 +230,7 @@ export default function App() {
               handleCommitted()
             }}
           />}
-          {adapter.kind() === 'local' && <OperationHistory key={`operations-${adapter.historyId}`} load={params => adapter.historyRequest('operations', params)} refreshKey={`${refreshKey}-${operation.busy}`} blocked={blocked} editing={Boolean(session.editingFile)} onResume={async record => {
+          {adapter.kind() === 'local' && <OperationHistory key={`operations-${adapter.historyId}`} load={params => adapter.historyRequest('operations', params)} refreshKey={repoSnapshot} blocked={blocked} editing={Boolean(session.editingFile)} onResume={async record => {
             try {
               const result = await adapter.performAction({ action: 'resumeCommit', id: record.id }, { head: session.headOid, branch: session.currentBranch })
               if (!result.cancelled) {
