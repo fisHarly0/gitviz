@@ -154,10 +154,13 @@ mod tests {
     #[test]
     fn paged_history_real_large_repositories() {
         let Ok(report_path) = std::env::var("GITVIZ_HISTORY_FIXTURES") else {
+            assert_ne!(std::env::var("CI").as_deref(), Ok("true"), "CI must supply GITVIZ_HISTORY_FIXTURES; real history coverage cannot be skipped");
             eprintln!("Set GITVIZ_HISTORY_FIXTURES to the large-history test report to run real Git fixtures.");
             return;
         };
         let fixtures: Value = serde_json::from_str(&std::fs::read_to_string(report_path).unwrap()).unwrap();
+        let counts: Vec<_> = fixtures.as_array().unwrap().iter().map(|fixture| fixture["count"].as_u64().unwrap()).collect();
+        assert_eq!(counts, vec![2000, 5000, 10000], "Expected all three real-history fixtures");
         for fixture in fixtures.as_array().unwrap() {
             let root = Path::new(fixture["root"].as_str().unwrap());
             let started = std::time::Instant::now();

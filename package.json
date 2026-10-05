@@ -1,7 +1,8 @@
 {
   "name": "gitviz",
   "private": true,
-  "version": "0.0.0",
+  "license": "MIT",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
@@ -19,6 +20,11 @@
     "dsh:package": "npm run dsh:build && node scripts/package-dsh.mjs",
     "dsh:test": "node --test tests/dsh-host.test.mjs",
     "history:test": "node --test tests/large-history.test.mjs",
+    "version:check": "node scripts/version.mjs check",
+    "version:set": "node scripts/version.mjs set",
+    "package:check": "node scripts/check-packages.mjs",
+    "delivery:test": "node --test tests/delivery.test.mjs",
+    "artifacts:manifest": "node scripts/artifact-manifest.mjs",
     "test": "node --test tests/*.test.js",
     "lint": "eslint .",
     "preview": "vite preview"

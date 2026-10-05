@@ -1,0 +1,9 @@
+# 接续：工程交付流水线
+
+F:/gitviz，main，基线 51cb87e。用户持续授权公开产品完善及提交/push。本批 P3 工程交付，其他模块边界不变。
+
+新增三系统 CI、版本同步/检查、插件完整性/重复打包测试、产物 manifest/校验和、根 MIT 许可证、贡献/安全反馈/交付说明。统一源码开发版本 0.3.0；Tauri 工具缓存改用项目 target，NSIS 在 Windows CI 中构建。Rust CI 大历史 fixture 缺失或不足时明确失败。
+
+本机已通过版本检查、lint、25 项前端测试、两个插件前端构建、包内容检查、2 项交付测试（版本错配/缺失 worker 拒绝/两次打包字节一致）。本批原生 `cargo check/test` 正在执行，日志 `F:/Codex/work/gitviz-product/delivery-cargo-{check,test}.log`；CI 尚待首次推送后取真实运行证据。不能将工作流文件存在算作 CI 验收通过。
+
+暂存与产物：F:/Codex/work/gitviz-product/delivery-*；npm/Cargo 缓存均在 F:/dev/cache。正式 Release、安装升级验收、签名公证、三端原生最终包验收、P1 多宿主并发和 P2 首次使用仍未完成。完整公开产品目标保持 active。

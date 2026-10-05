@@ -4,6 +4,8 @@
 
 桌面应用基于 Tauri 2 + Rust，另有 VS Code 与 DSH 插件。启动后可拖入本地仓库；浏览器模式可只读浏览 GitHub 仓库。支持源码启动及本地构建的 Windows 免安装程序，尚未发布 MSI/NSIS 安装包。
 
+当前源码为 **0.3.0 开发版**。版本、打包校验和三系统 CI 见 [工程交付说明](docs/delivery.md)；历史 0.2.0 记录保留，旧包不会自动包含后续修复。参与开发见 [贡献指南](CONTRIBUTING.md)，安全问题见 [反馈方式](SECURITY.md)。
+
 | 入口 | 历史浏览 | 修改与试验 |
 |---|---|---|
 | Windows 桌面本地（开发版） | 完整本机可达历史、全局搜索、横竖地图 | 确认后建分支、切换、独立 worktree、备份后恢复；实验性编辑与导出 |
@@ -51,7 +53,7 @@ Windows 三端原生界面已验证：分支被其他 worktree 占用、确认�
 
 ```powershell
 npm run extension:package
-# 在 VS Code 中执行“扩展: 从 VSIX 安装”，选择 artifacts/gitviz-0.2.0.vsix
+# 在 VS Code 中执行“扩展: 从 VSIX 安装”，选择 artifacts/gitviz-0.3.0.vsix
 # 打开本地仓库，执行“Gitviz: 打开交互式版本树”
 ```
 
@@ -63,7 +65,7 @@ npm run extension:package
 
 ```bash
 npm run dsh:package
-# DSH → 插件 → 添加插件，输入 artifacts/fisharly-gitviz-dsh-0.2.0.tgz 的绝对路径
+# DSH → 插件 → 添加插件，输入 artifacts/fisharly-gitviz-dsh-0.3.0.tgz 的绝对路径
 # 安装完成后选择“立即启用”，打开侧栏“Gitviz 版本树”
 ```
 

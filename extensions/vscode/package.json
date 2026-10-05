@@ -2,27 +2,73 @@
   "name": "gitviz",
   "displayName": "Gitviz · 版本树",
   "description": "像游戏存档一样探索 Git：交互式版本树、节点比较、独立试验工作区与保留历史的恢复。",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "fisHarly0",
   "author": "Harly",
-  "repository": { "type": "git", "url": "https://github.com/fisHarly0/gitviz.git" },
-  "engines": { "vscode": "^1.90.0" },
-  "categories": ["SCM Providers", "Visualization"],
-  "keywords": ["git", "graph", "worktree", "history"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fisHarly0/gitviz.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Visualization"
+  ],
+  "keywords": [
+    "git",
+    "graph",
+    "worktree",
+    "history"
+  ],
   "main": "./extension.cjs",
-  "extensionKind": ["workspace"],
+  "extensionKind": [
+    "workspace"
+  ],
   "capabilities": {
-    "untrustedWorkspaces": { "supported": false, "description": "Gitviz 需要在受信任的工作区运行本地 Git。" },
-    "virtualWorkspaces": { "supported": false }
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Gitviz 需要在受信任的工作区运行本地 Git。"
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
   },
   "contributes": {
-    "commands": [{ "command": "gitviz.open", "title": "打开交互式版本树", "category": "Gitviz", "icon": "$(git-merge)" }],
-    "menus": { "scm/title": [{ "command": "gitviz.open", "group": "navigation", "when": "scmProvider == git" }] },
+    "commands": [
+      {
+        "command": "gitviz.open",
+        "title": "打开交互式版本树",
+        "category": "Gitviz",
+        "icon": "$(git-merge)"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "gitviz.open",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ]
+    },
     "configuration": {
       "title": "Gitviz",
       "properties": {
-        "gitviz.historyLimit": { "type": "number", "default": 300, "minimum": 20, "maximum": 2000, "description": "每批读取的提交数。可继续加载全部本机可达历史，没有总条数上限。" },
-        "gitviz.worktreeDirectory": { "type": "string", "default": "", "description": "试验工作树父目录；Windows 默认 F:\\Codex\\worktrees（若存在 F 盘），其他环境使用仓库旁的 gitviz-worktrees。" }
+        "gitviz.historyLimit": {
+          "type": "number",
+          "default": 300,
+          "minimum": 20,
+          "maximum": 2000,
+          "description": "每批读取的提交数。可继续加载全部本机可达历史，没有总条数上限。"
+        },
+        "gitviz.worktreeDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "试验工作树父目录；Windows 默认 F:\\Codex\\worktrees（若存在 F 盘），其他环境使用仓库旁的 gitviz-worktrees。"
+        }
       }
     }
   }

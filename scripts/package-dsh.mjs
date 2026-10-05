@@ -1,6 +1,9 @@
 import fs from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
+import { checkVersion } from './version.mjs'
+
+await checkVersion()
 
 const output = path.resolve(process.env.GITVIZ_ARTIFACTS_DIR || 'artifacts')
 await fs.mkdir(output, { recursive: true })

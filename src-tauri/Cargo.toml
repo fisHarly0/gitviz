@@ -1,6 +1,6 @@
 [package]
 name = "gitviz"
-version = "0.2.0"
+version = "0.3.0"
 description = "gitviz - game-save metaphor git GUI desktop"
 authors = ["Harly <1211074765@qq.com>"]
 license = "MIT"

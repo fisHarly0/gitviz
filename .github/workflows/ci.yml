@@ -1,0 +1,115 @@
+name: Build and verify
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI: 'true'
+      CARGO_BUILD_JOBS: '2'
+      RUST_MIN_STACK: '8388608'
+      RAYON_NUM_THREADS: '2'
+      CARGO_HOME: ${{ runner.temp }}/cargo
+      npm_config_cache: ${{ runner.temp }}/npm-cache
+      GITVIZ_TEST_ROOT: ${{ runner.temp }}/gitviz-tests
+      GITVIZ_PRODUCT_TEST_ROOT: ${{ runner.temp }}/gitviz-rust-tests
+      GITVIZ_LARGE_TEST_ROOT: ${{ runner.temp }}/gitviz-history
+      GITVIZ_HISTORY_FIXTURES: ${{ runner.temp }}/gitviz-history/report.json
+      GITVIZ_DELIVERY_TEST_ROOT: ${{ runner.temp }}/gitviz-delivery
+      GITVIZ_ARTIFACTS_DIR: ${{ runner.temp }}/gitviz-artifacts
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Linux native dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup override set 1.95.0
+          rustc --version
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ env.CARGO_HOME }}/registry
+            ${{ env.CARGO_HOME }}/git
+            src-tauri/target
+          key: rust-${{ runner.os }}-${{ runner.arch }}-1.95.0-${{ hashFiles('src-tauri/Cargo.lock') }}
+      - name: Locked JavaScript dependencies
+        run: npm ci
+      - name: Version and static checks
+        run: |
+          npm run version:check
+          npm run lint
+      - name: Frontend and real Git tests
+        run: |
+          npm test
+          npm run extension:test
+          npm run dsh:test
+          npm run history:test
+      - name: Plugin builds and package integrity
+        run: |
+          npm run build
+          npm run extension:package
+          npm run dsh:package
+          npm run package:check
+          npm run delivery:test
+      - name: Rust checks and real Git tests
+        working-directory: src-tauri
+        run: |
+          cargo check --locked --all-targets
+          cargo test --locked --lib -- --nocapture --test-threads=1
+      - name: Desktop build
+        if: runner.os != 'Windows'
+        run: npm run desktop:build -- --ci
+      - name: Windows NSIS installer
+        if: runner.os == 'Windows'
+        run: npm run desktop:bundle -- --ci --bundles nsis
+      - name: Collect native artifacts
+        shell: pwsh
+        run: |
+          if ($IsWindows) {
+            Copy-Item -LiteralPath 'src-tauri/target/release/gitviz.exe' -Destination "$env:GITVIZ_ARTIFACTS_DIR/gitviz-windows-x64.exe"
+            Get-ChildItem -LiteralPath 'src-tauri/target/release/bundle/nsis' -Filter '*-setup.exe' | Copy-Item -Destination $env:GITVIZ_ARTIFACTS_DIR
+            if (!(Get-ChildItem -LiteralPath $env:GITVIZ_ARTIFACTS_DIR -Filter '*-setup.exe')) { throw 'Missing NSIS installer' }
+          } else {
+            $target = if ($IsMacOS) { 'macos' } else { 'linux' }
+            Copy-Item -LiteralPath 'src-tauri/target/release/gitviz' -Destination "$env:GITVIZ_ARTIFACTS_DIR/gitviz-$target-${{ runner.arch }}"
+          }
+      - name: Source identity and checksums
+        run: npm run artifacts:manifest
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gitviz-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          path: ${{ env.GITVIZ_ARTIFACTS_DIR }}
+          if-no-files-found: error
+          retention-days: 14

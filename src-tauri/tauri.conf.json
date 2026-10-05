@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "gitviz",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "cn.hlhaya.gitviz",
   "build": {
     "frontendDist": "../dist",
@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "useLocalToolsDir": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
