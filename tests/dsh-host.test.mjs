@@ -86,6 +86,19 @@ test('DSH rejects sparse checkout in preview and rechecks it after confirmation'
   assert.equal(await fs.readFile(path.join(f.root, '中文.txt'), 'utf8'), 'second\n')
 })
 
+test('DSH reports post-checkout position changes as failure and retains the actual result', async t => {
+  const f = await fixture(t)
+  await f.git.command(['branch', 'old', f.first])
+  await fs.writeFile(path.join(f.root, '.git/hooks/post-checkout'), '#!/bin/sh\ngit symbolic-ref HEAD refs/heads/main\n', { mode: 0o755 })
+  const { result: plan } = await f.call('prepare', { action: 'switchBranch', name: 'old', expected: f.expected }, f.repoId)
+  const executed = await f.call('execute', { token: plan.token }, f.repoId)
+  assert.equal(executed.status, 400); assert.match(executed.error, /结果与确认不一致/)
+  assert.equal(await f.git.head(), f.expected.head); assert.equal(await f.git.branch(), 'main')
+  assert.equal(await fs.readFile(path.join(f.root, '中文.txt'), 'utf8'), 'first\n')
+  const record = (await f.git.operations()).records[0]
+  assert.equal(record.state, 'failed'); assert.equal(record.result.head, f.expected.head)
+})
+
 test('DSH switch ticket binds the target branch revision and cannot be changed by execute parameters', async t => {
   const f = await fixture(t)
   await f.git.command(['branch', 'target', f.first])

@@ -23,7 +23,7 @@ pub enum Action {
     ResumeCommit { id: String },
 }
 
-struct Plan { root: PathBuf, expected: Expected, action: Action, revision: String, checkpoint: Option<Value>, created: Instant }
+struct Plan { root: PathBuf, expected: Expected, action: Action, revision: String, target: Option<String>, checkpoint: Option<Value>, created: Instant }
 #[derive(Default)]
 pub struct Operations { plans: HashMap<String, Plan> }
 pub type SharedOperations = Arc<Mutex<Operations>>;
@@ -184,6 +184,30 @@ fn validate(root: &Path, expected: &Expected, action: &Action) -> Result<Value, 
     Ok(preview)
 }
 
+fn outcome_error(detail: &str) -> String {
+    format!("Git 操作结果与确认不一致：{detail}。外部 Git 或钩子可能改变了现场；已产生的提交、分支和文件保留，请刷新并检查操作记录，不要直接重试。")
+}
+fn verify_position(root: &Path, expected: &Expected) -> Result<(), String> {
+    let reference = git(root, &["rev-parse", "--symbolic-full-name", "HEAD"])?;
+    let expected_ref = if expected.branch.is_empty() { "HEAD".into() } else { format!("refs/heads/{}", expected.branch) };
+    if head(root)? != expected.head || reference.trim() != expected_ref { return Err(outcome_error("实际 HEAD 或分支已变化")); }
+    Ok(())
+}
+fn verify_checkout(root: &Path, expected: &Expected) -> Result<(), String> {
+    verify_position(root, expected)?;
+    if !git(root, &["status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignore-submodules=none"])?.is_empty() { return Err(outcome_error("切换或提交后工作区仍有改动")); }
+    verify_position(root, expected)
+}
+fn verify_commit(root: &Path, record: &Value, expected: &Expected) -> Result<(), String> {
+    let actual = head(root)?;
+    if git(root, &["show", "-s", "--format=%P", &actual, "--"])?.trim() != expected.head { return Err(outcome_error("新提交的父提交不是确认时的起点")); }
+    if git(root, &["rev-parse", &format!("{actual}^{{tree}}")])?.trim() != record["checkpoint"]["tree"].as_str().ok_or("缺少提交检查点。")? { return Err(outcome_error("新提交内容不同于提交前检查点")); }
+    if let Some(backup) = record["backup"].as_str() {
+        if git(root, &["rev-parse", "--verify", &format!("refs/heads/{backup}")])?.trim() != expected.head { return Err(outcome_error("备份引用已变化")); }
+    }
+    verify_checkout(root, &Expected { repo: expected.repo.clone(), head: actual, branch: expected.branch.clone() })
+}
+
 struct OperationLock { file: PathBuf, root: PathBuf }
 impl Drop for OperationLock { fn drop(&mut self) { if !super::git_process::is_uncertain(&self.root) { let _ = fs::remove_file(&self.file); } } }
 fn lock_repo(root: &Path) -> Result<OperationLock, String> {
@@ -193,8 +217,9 @@ fn lock_repo(root: &Path) -> Result<OperationLock, String> {
     write!(file, "{}", std::process::id()).map_err(|e|e.to_string())?; Ok(OperationLock { file: path, root: root.to_path_buf() })
 }
 
-fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint: Option<&Value>) -> Result<Value, String> {
-    let _lock = lock_repo(root)?; validate(root, expected, action)?;
+fn execute_action(root: &Path, expected: &Expected, action: &Action, target: Option<&str>, checkpoint: Option<&Value>) -> Result<Value, String> {
+    let _lock = lock_repo(root)?; let preview = validate(root, expected, action)?;
+    if preview["target"].as_str() != target { return Err("目标存档已变化，请重新预览。".into()); }
     if let Action::ResumeCommit { id } = action { if Some(&journal::read(root,id)?["checkpoint"]) != checkpoint { return Err("失败检查点已变化，请重新预览。".into()); } }
     let mut record = if let Action::ResumeCommit { id } = action {
         let mut record = pending_commit(root,id,expected)?;
@@ -204,14 +229,26 @@ fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint:
     let outcome = (|| -> Result<Value,String> {
     let mut result = json!({});
     match action {
-        Action::SwitchBranch { name } => { git(root, &["switch", "--no-guess", "--no-overwrite-ignore", "--", name])?; }
-        Action::CreateBranch { name, oid } => { git(root, &["branch", "--", name, oid])?; }
-        Action::ForkEdit { name, oid } => { git(root, &["switch", "--no-overwrite-ignore", "-c", name, oid])?; }
+        Action::SwitchBranch { name } => {
+            git(root, &["switch", "--no-guess", "--no-overwrite-ignore", "--", name])?;
+            verify_checkout(root, &Expected { repo: expected.repo.clone(), head: target.ok_or("缺少确认目标。")?.into(), branch: name.clone() })?;
+        }
+        Action::CreateBranch { name, oid } => {
+            git(root, &["branch", "--", name, oid])?;
+            if git(root, &["rev-parse", "--verify", &format!("refs/heads/{name}")])?.trim() != oid { return Err(outcome_error("新分支没有指向确认的存档")); }
+            verify_position(root, expected)?;
+        }
+        Action::ForkEdit { name, oid } => {
+            git(root, &["switch", "--no-overwrite-ignore", "-c", name, oid])?;
+            verify_checkout(root, &Expected { repo: expected.repo.clone(), head: oid.clone(), branch: name.clone() })?;
+        }
         Action::CreateWorktree { name, oid, directory } => {
             fs::create_dir_all(directory).map_err(|e|e.to_string())?;
             let folder = Path::new(directory).join(format!("gitviz-{}-{}", &oid[..7], &nonce()?[..8]));
             record["worktree"] = json!(folder.to_string_lossy()); journal::save(root,&record)?;
             git(root, &["worktree", "add", "-b", name, "--", &folder.to_string_lossy(), oid])?;
+            verify_checkout(&folder, &Expected { repo: folder.to_string_lossy().into_owned(), head: oid.clone(), branch: name.clone() })?;
+            verify_position(root, expected)?;
             result["worktree"] = json!(folder.to_string_lossy());
         }
         Action::SaveEdit { path, content, message } => {
@@ -236,9 +273,13 @@ fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint:
             let saved = (|| -> Result<(), String> {
                 guard(root, expected, false)?;
                 git(root, &["add", "--", path])?;
+                if fs::read(&full).map_err(|e|e.to_string())? != content.as_bytes() { return Err(outcome_error("编辑文件在暂存期间被修改，尚未提交")); }
+                let staged_paths = git(root, &["diff", "--cached", "--name-only", "--no-renames", "--ignore-submodules=none", "-z", &expected.head, "--"])?;
+                if staged_paths.split('\0').filter(|p|!p.is_empty()).any(|p|p != path) { return Err(outcome_error("暂存区混入其他文件，尚未提交")); }
                 journal::checkpoint(root,&mut record,message)?;
+                check_checkpoint(root,&record,expected)?;
                 git(root, &["commit", "--only", "-m", message, "--", path])?;
-                if git(root,&["rev-parse","HEAD^{tree}"])?.trim() != record["checkpoint"]["tree"].as_str().unwrap_or("") { return Err("提交已创建，但钩子改变了结果，请检查差异。".into()); }
+                verify_commit(root,&record,expected)?;
                 Ok(())
             })();
             if let Err(error) = saved { return Err(format!("提交未完成：{error}\n编辑内容已保留在工作文件或暂存区，未自动丢弃。请检查 Git 状态，解决身份、钩子或签名问题后继续提交。")); }
@@ -252,8 +293,10 @@ fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint:
                 git(root, &["restore", &format!("--source={oid}"), "--staged", "--worktree", "--", "."])?;
                 let message = format!("Restore snapshot {}\n\nPrevious HEAD preserved on {backup}.", &oid[..7]);
                 journal::checkpoint(root,&mut record,&message)?;
+                if git(root, &["rev-parse", &format!("{oid}^{{tree}}")])?.trim() != record["checkpoint"]["tree"].as_str().unwrap_or("") { record["checkpoint"] = Value::Null; return Err(outcome_error("恢复暂存内容不同于目标存档，尚未提交")); }
+                check_checkpoint(root,&record,expected)?;
                 git(root, &["commit", "-m", &message])?;
-                if git(root, &["rev-parse", "HEAD^{tree}"])? != git(root, &["rev-parse", &format!("{oid}^{{tree}}")])? { return Err("提交钩子修改了结果，请检查差异。".into()); }
+                verify_commit(root,&record,expected)?;
                 Ok(())
             })();
             if let Err(error) = restored { return Err(format!("恢复未完成：{error}\n恢复前版本在 {backup}；已产生的文件和暂存更改保留，请检查 Git 状态。")); }
@@ -262,7 +305,7 @@ fn execute_action(root: &Path, expected: &Expected, action: &Action, checkpoint:
         Action::ResumeCommit { .. } => {
             check_checkpoint(root,&record,expected)?;
             git(root,&["commit","-m",record["checkpoint"]["message"].as_str().ok_or("缺少提交说明。")?])?;
-            if git(root,&["rev-parse","HEAD^{tree}"])?.trim() != record["checkpoint"]["tree"].as_str().unwrap_or("") { return Err("提交已创建，但钩子改变了结果，请检查新提交与检查点的差异。".into()); }
+            verify_commit(root,&record,expected)?;
             result["backup"] = record["backup"].clone();
         }
     }
@@ -293,7 +336,8 @@ impl Operations {
         let mut preview = preview_at_revision(root, &expected, &action, &revision)?;
         let token = nonce()?;
         let checkpoint = if matches!(action,Action::ResumeCommit { .. }) {Some(preview["checkpoint"].clone())} else {None};
-        self.plans.insert(token.clone(), Plan { root: canonical(root)?, expected, action, revision, checkpoint, created: Instant::now() });
+        let target = preview["target"].as_str().map(str::to_owned);
+        self.plans.insert(token.clone(), Plan { root: canonical(root)?, expected, action, revision, target, checkpoint, created: Instant::now() });
         preview["token"] = json!(token); Ok(preview)
     }
     pub fn execute(&mut self, root: &Path, token: &str) -> Result<Value, String> {
@@ -301,7 +345,7 @@ impl Operations {
         if plan.created.elapsed() >= Duration::from_secs(300) { return Err("确认已过期，请重新预览。".into()); }
         if canonical(root)? != plan.root { return Err("仓库已变化，不能执行旧操作。".into()); }
         if super::history::snapshot(root, 20)?["revision"] != plan.revision { return Err("历史已变化，请重新预览操作。".into()); }
-        execute_action(root, &plan.expected, &plan.action, plan.checkpoint.as_ref())
+        execute_action(root, &plan.expected, &plan.action, plan.target.as_deref(), plan.checkpoint.as_ref())
     }
 }
 
@@ -360,6 +404,93 @@ mod tests {
             ops.execute(&self.root, plan["token"].as_str().unwrap())
         }
         fn save(&self, content: &str) -> Action { Action::SaveEdit { path: "中文.txt".into(), content: content.into(), message: "edit safely".into() } }
+    }
+    #[test]
+    fn outcome_restore_rechecks_position_after_backup_reference_hook() {
+        let f = Fixture::new();
+        git(&f.root, &["branch", "other", &f.first]).unwrap();
+        let hook = f.root.join(".git/hooks/reference-transaction");
+        fs::write(&hook, "#!/bin/sh\nif test \"$1\" != committed; then exit 0; fi\nwhile read old new ref; do\ncase \"$ref\" in refs/heads/gitviz/backup-*) git symbolic-ref HEAD refs/heads/other;; esac\ndone\n").unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&hook,fs::Permissions::from_mode(0o755)).unwrap(); }
+        assert!(f.perform(Action::Restore { oid: f.first.clone() }).unwrap_err().contains("HEAD 已变化"));
+        assert_eq!(head(&f.root).unwrap(), f.first); assert_eq!(branch(&f.root), "other");
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "second\n");
+        let record = journal::list(&f.root,None,30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"], "failed"); assert!(record["checkpoint"].is_null());
+        assert_eq!(git(&f.root, &["rev-parse", record["backup"].as_str().unwrap()]).unwrap().trim(), f.latest);
+    }
+    #[test]
+    fn outcome_post_checkout_changes_are_reported_with_actual_position() {
+        let f = Fixture::new();
+        git(&f.root, &["branch", "other", &f.first]).unwrap();
+        let hook = f.root.join(".git/hooks/post-checkout");
+        fs::write(&hook, "#!/bin/sh\ngit symbolic-ref HEAD refs/heads/main\n").unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&hook,fs::Permissions::from_mode(0o755)).unwrap(); }
+        assert!(f.perform(Action::SwitchBranch { name: "other".into() }).unwrap_err().contains("结果与确认不一致"));
+        assert_eq!(head(&f.root).unwrap(), f.latest); assert_eq!(branch(&f.root), "main");
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "first\n");
+        let record = journal::list(&f.root,None,30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"], "failed"); assert_eq!(record["result"]["head"], f.latest); assert_eq!(record["result"]["branch"], "main");
+    }
+    #[test]
+    fn outcome_post_commit_replacement_with_same_tree_and_wrong_parent_is_detected() {
+        let f = Fixture::new();
+        let tree = git(&f.root, &["rev-parse", &format!("{}^{{tree}}", f.first)]).unwrap();
+        let replacement = git(&f.root, &["commit-tree", tree.trim(), "-p", &f.first, "-m", "external replacement"]).unwrap().trim().to_owned();
+        let hook = f.root.join(".git/hooks/post-commit");
+        fs::write(&hook, format!("#!/bin/sh\ngit rev-parse HEAD > .git/created-by-gitviz\ngit update-ref HEAD {replacement}\n")).unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&hook,fs::Permissions::from_mode(0o755)).unwrap(); }
+        assert!(f.perform(Action::Restore { oid: f.first.clone() }).unwrap_err().contains("父提交"));
+        let created = fs::read_to_string(f.root.join(".git/created-by-gitviz")).unwrap();
+        assert_eq!(git(&f.root, &["rev-parse", &format!("{}^", created.trim())]).unwrap().trim(), f.latest);
+        assert_eq!(head(&f.root).unwrap(), replacement);
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "first\n");
+        let record = journal::list(&f.root,None,30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"], "failed"); assert_eq!(record["result"]["head"], replacement);
+        assert_eq!(git(&f.root, &["rev-parse", record["backup"].as_str().unwrap()]).unwrap().trim(), f.latest);
+        assert!(pending_commit(&f.root,record["id"].as_str().unwrap(),&f.expected()).unwrap_err().contains("起点不同"));
+    }
+    #[test]
+    fn outcome_edit_rejects_post_index_hook_staging_other_files() {
+        let f = Fixture::new(); let hook = f.root.join(".git/hooks/post-index-change");
+        fs::write(&hook, "#!/bin/sh\nif test -f .git/race-fired; then exit 0; fi\nprintf fired > .git/race-fired\nprintf external-staging > external.txt\ngit add -- external.txt\n").unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&hook,fs::Permissions::from_mode(0o755)).unwrap(); }
+        assert!(f.perform(f.save("my edit\n")).unwrap_err().contains("暂存区混入其他文件"));
+        assert_eq!(head(&f.root).unwrap(), f.latest);
+        assert_eq!(fs::read_to_string(f.root.join("中文.txt")).unwrap(), "my edit\n");
+        assert_eq!(fs::read_to_string(f.root.join("external.txt")).unwrap(), "external-staging");
+        let record = journal::list(&f.root,None,30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"], "failed"); assert!(record["checkpoint"].is_null());
+        assert!(pending_commit(&f.root,record["id"].as_str().unwrap(),&f.expected()).is_err());
+    }
+    #[test]
+    fn outcome_restore_rejects_post_index_hook_staging_before_commit() {
+        let f = Fixture::new(); let hook = f.root.join(".git/hooks/post-index-change");
+        fs::write(&hook, "#!/bin/sh\nif test -f .git/race-fired; then exit 0; fi\nprintf fired > .git/race-fired\nprintf external-staging > external.txt\ngit add -- external.txt\n").unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&hook,fs::Permissions::from_mode(0o755)).unwrap(); }
+        assert!(f.perform(Action::Restore { oid: f.first.clone() }).unwrap_err().contains("恢复暂存内容不同"));
+        assert_eq!(head(&f.root).unwrap(), f.latest);
+        assert_eq!(fs::read_to_string(f.root.join("external.txt")).unwrap(), "external-staging");
+        assert!(git(&f.root, &["diff", "--cached", "--name-only"]).unwrap().contains("external.txt"));
+        let record = journal::list(&f.root,None,30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"], "failed"); assert!(record["checkpoint"].is_null());
+        assert!(pending_commit(&f.root,record["id"].as_str().unwrap(),&f.expected()).unwrap_err().contains("没有可继续"));
+    }
+    #[test]
+    fn outcome_worktree_hook_changes_preserve_new_directory_and_original_repo() {
+        let f = Fixture::new(); let hooks = f.root.join(".git/hooks");
+        git(&f.root, &["config", "core.hooksPath", hooks.to_str().unwrap()]).unwrap();
+        let hook = hooks.join("post-checkout");
+        fs::write(&hook, "#!/bin/sh\nprintf hook-change > added.txt\n").unwrap();
+        #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&hook,fs::Permissions::from_mode(0o755)).unwrap(); }
+        assert!(f.perform(Action::CreateWorktree { name: "trial-hook".into(), oid: f.latest.clone(), directory: f.root.with_extension("trials").to_string_lossy().into_owned() }).unwrap_err().contains("工作区仍有改动"));
+        let record = journal::list(&f.root,None,30).unwrap()["records"][0].clone();
+        assert_eq!(record["state"], "failed");
+        let folder = Path::new(record["worktree"].as_str().unwrap());
+        assert_eq!(fs::read_to_string(folder.join("added.txt")).unwrap(), "hook-change");
+        assert_eq!(fs::read_to_string(f.root.join("added.txt")).unwrap(), "new file\n");
+        assert_eq!(head(&f.root).unwrap(), f.latest); assert_eq!(branch(&f.root), "main");
+        assert_eq!(git(&f.root, &["rev-parse", "refs/heads/trial-hook"]).unwrap().trim(), f.latest);
     }
     #[test]
     fn preflight_sparse_checkout_rejects_preview_and_confirmation_without_touching_files() {

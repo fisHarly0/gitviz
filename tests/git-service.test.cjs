@@ -386,6 +386,82 @@ async function failedRestore() {
   return f
 }
 
+test('outcome restore rechecks position after a backup reference hook moves HEAD', async () => {
+  const f = await fixture()
+  await f.put('a.txt', 'first'); const first = await f.commit('first')
+  await f.put('a.txt', 'second'); const head = await f.commit('second'), expected = await f.expected()
+  await f.repo.command(['branch', 'other', first])
+  await fs.writeFile(path.join(f.root, '.git/hooks/reference-transaction'), '#!/bin/sh\nif test "$1" != committed; then exit 0; fi\nwhile read old new ref; do\ncase "$ref" in refs/heads/gitviz/backup-*) git symbolic-ref HEAD refs/heads/other;; esac\ndone\n', { mode: 0o755 })
+  await assert.rejects(f.repo.restore(first, expected), /HEAD 已变化/)
+  assert.equal(await f.repo.head(), first); assert.equal(await f.repo.branch(), 'other')
+  assert.equal(await fs.readFile(path.join(f.root, 'a.txt'), 'utf8'), 'second')
+  const record = (await f.repo.operations()).records[0]
+  assert.equal(record.state, 'failed'); assert.equal(record.checkpoint, undefined)
+  assert.equal((await f.repo.command(['rev-parse', record.backup])).trim(), head)
+})
+
+test('outcome verification detects post-checkout position changes and preserves actual files', async () => {
+  const f = await fixture()
+  await f.put('a.txt', 'first'); const first = await f.commit('first')
+  await f.put('a.txt', 'second'); const head = await f.commit('second')
+  await f.repo.command(['branch', 'old', first])
+  await fs.writeFile(path.join(f.root, '.git/hooks/post-checkout'), '#!/bin/sh\ngit symbolic-ref HEAD refs/heads/main\n', { mode: 0o755 })
+  const plan = await f.repo.prepareAction('switchBranch', { name: 'old', expected: await f.expected() })
+  await assert.rejects(f.repo.executePrepared(plan), /结果与确认不一致/)
+  assert.equal(await f.repo.head(), head); assert.equal(await f.repo.branch(), 'main')
+  assert.equal(await fs.readFile(path.join(f.root, 'a.txt'), 'utf8'), 'first')
+  const record = (await f.repo.operations()).records[0]
+  assert.equal(record.state, 'failed'); assert.equal(record.result.head, head); assert.equal(record.result.branch, 'main')
+})
+
+test('outcome verification rejects a post-commit replacement with the right tree but wrong parent', async () => {
+  const f = await fixture()
+  await f.put('a.txt', 'first'); const first = await f.commit('first')
+  await f.put('a.txt', 'second'); const head = await f.commit('second'), expected = await f.expected()
+  const tree = (await f.repo.command(['rev-parse', `${first}^{tree}`])).trim()
+  const replacement = (await f.repo.command(['commit-tree', tree, '-p', first, '-m', 'external replacement'])).trim()
+  await fs.writeFile(path.join(f.root, '.git/hooks/post-commit'), `#!/bin/sh\ngit rev-parse HEAD > .git/created-by-gitviz\ngit update-ref HEAD ${replacement}\n`, { mode: 0o755 })
+  await assert.rejects(f.repo.restore(first, expected), /父提交/)
+  const created = (await fs.readFile(path.join(f.root, '.git/created-by-gitviz'), 'utf8')).trim()
+  assert.equal((await f.repo.command(['rev-parse', `${created}^`])).trim(), head)
+  assert.equal(await f.repo.head(), replacement)
+  assert.equal(await fs.readFile(path.join(f.root, 'a.txt'), 'utf8'), 'first')
+  const record = (await f.repo.operations()).records[0]
+  assert.equal(record.state, 'failed'); assert.equal(record.result.head, replacement)
+  assert.equal((await f.repo.command(['rev-parse', record.backup])).trim(), head)
+  await assert.rejects(f.repo.pendingCommit(record.id, await f.expected()), /起点不同/)
+})
+
+test('outcome verification catches worktree hook edits and preserves the new directory', async () => {
+  const f = await fixture()
+  await f.put('a.txt', 'original'); const head = await f.commit('first')
+  const hooks = path.join(f.root, '.git/hooks')
+  await f.repo.command(['config', 'core.hooksPath', hooks])
+  await fs.writeFile(path.join(hooks, 'post-checkout'), '#!/bin/sh\nprintf hook-change > a.txt\n', { mode: 0o755 })
+  await assert.rejects(f.repo.createWorktree(head, 'trial-hook', testRoot, await f.expected()), /工作区仍有改动/)
+  const record = (await f.repo.operations()).records[0]
+  assert.equal(record.state, 'failed'); assert.ok(record.worktree)
+  assert.equal(await fs.readFile(path.join(record.worktree, 'a.txt'), 'utf8'), 'hook-change')
+  assert.equal(await fs.readFile(path.join(f.root, 'a.txt'), 'utf8'), 'original')
+  assert.equal(await f.repo.head(), head); assert.equal(await f.repo.branch(), 'main')
+  assert.equal((await f.repo.command(['rev-parse', 'refs/heads/trial-hook'])).trim(), head)
+})
+
+test('outcome precommit check rejects post-index hook staging during restore without making a commit', async () => {
+  const f = await fixture()
+  await f.put('a.txt', 'first'); const first = await f.commit('first')
+  await f.put('a.txt', 'second'); const head = await f.commit('second'), expected = await f.expected()
+  await fs.writeFile(path.join(f.root, '.git/hooks/post-index-change'), '#!/bin/sh\nif test -f .git/race-fired; then exit 0; fi\nprintf fired > .git/race-fired\nprintf external-staging > external.txt\ngit add -- external.txt\n', { mode: 0o755 })
+  await assert.rejects(f.repo.restore(first, expected), /恢复暂存内容不同/)
+  assert.equal(await f.repo.head(), head)
+  assert.equal(await fs.readFile(path.join(f.root, 'external.txt'), 'utf8'), 'external-staging')
+  assert.match(await f.repo.command(['diff', '--cached', '--name-only']), /external.txt/)
+  const record = (await f.repo.operations()).records[0]
+  assert.equal(record.state, 'failed'); assert.ok(record.backup)
+  assert.equal(record.checkpoint, undefined)
+  await assert.rejects(f.repo.pendingCommit(record.id, expected), /没有可继续/)
+})
+
 test('persistent recovery preview is read-only and continuing keeps identity, parent, backup and exact tree', async () => {
   const f = await failedRestore(), record = f.record, expected = await f.expected()
   assert.equal(record.state, 'failed'); assert.equal(record.action, 'restore'); assert.equal(record.before.head, f.current)

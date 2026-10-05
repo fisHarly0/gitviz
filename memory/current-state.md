@@ -2,9 +2,11 @@
 
 更新时间：2026-10-05
 
-最新批次：三端写入预检对齐（基线 08240a1）。切换/恢复/编辑/续交检查稀疏检出与隐藏 index 标记；子模块 ignore 配置不能掩盖未提交修改；插件恢复的子模块、忽略文件碰撞与身份检查提前到预览；linked worktree 的六种进行中状态在预览和执行检查。Windows 真实 Git 用例通过，当前接续见 `memory/handoff-2026-10-05-write-preflight.md`；完整公开交付目标保持未完成。
+最新批次：Git 执行结果核对（基线 9b299db）。三端在命令返回后检查位置、目标、父提交、tree、工作区和备份；建立备份后重查位置再恢复文件，恢复/编辑暂存期间混入内容会在 commit 前拒绝且不提供无效续交检查点。真实 hooks 覆盖移动 HEAD、错误父提交、worktree 改文件及暂存混入，保留实际结果并记录失败。当前接续见 `memory/handoff-2026-10-05-operation-outcomes.md`；完整公开交付目标保持未完成。
 
-本批 Node/布局 34/34 + 新增身份预览测试 1/1，Rust 全量 19/19（含大历史与跨宿主续交），DSH HTTP 7/7，lint、主前端构建、`cargo check --release` 均通过。两个插件包在 `F:/Codex/work/gitviz-product/preflight-packages/`，解包核对测试源码并加载成功。本批未重建桌面 exe、未跑原生 UI；旧 process-packages 的 exe 不含本次改动。下一批处理执行期间外部 Git 状态变化及宿主退出，随后推进地图和发行验收。
+本批 Node/布局整组 39/39，最后新增备份 hook 用例随 7 项恢复定向回归通过，共 40 个不同用例；Rust 全量 24/24 + 新增备份 hook 1/1，共 25 个不同用例；DSH HTTP 8/8。lint、主前端构建、`cargo check --release` 通过。插件包及 SHA-256 在 `F:/Codex/work/gitviz-product/outcome-packages/`，解包模块与源码一致。本批未重建桌面 exe、未跑原生 UI；旧 process-packages exe 不含最近两批改动。下一模块处理插件宿主退出，再进行三端原生异常流程、地图和发行验收。前后检查不构成跨程序原子事务。
+
+上批预检对齐见 `memory/handoff-2026-10-05-write-preflight.md`：稀疏、隐藏 index 标记、子模块显示配置与 linked worktree 状态检查已补齐。
 
 上批进程生命周期修复见 `memory/handoff-2026-10-05-git-process-lifecycle.md`：超时等待进程清理和输出关闭，无法确认停止时暂停写入并保留已有锁；普通失败保留现场并可按检查点继续。Windows 实测，Unix 未运行。
 

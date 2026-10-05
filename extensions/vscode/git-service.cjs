@@ -191,6 +191,28 @@ class GitService {
 
   async operations(params) { return this.journal.list(params) }
 
+  outcomeError(detail) { return new Error(`Git 操作结果与确认不一致：${detail}。外部 Git 或钩子可能改变了现场；已产生的提交、分支和文件保留，请刷新并检查操作记录，不要直接重试。`) }
+
+  async verifyPosition(expected) {
+    const ref = (await this.command(['rev-parse', '--symbolic-full-name', 'HEAD'])).trim()
+    if (await this.head() !== expected.head || ref !== (expected.branch ? `refs/heads/${expected.branch}` : 'HEAD')) throw this.outcomeError('实际 HEAD 或分支已变化')
+  }
+
+  async verifyCheckout(expected) {
+    await this.verifyPosition(expected)
+    if (await this.status()) throw this.outcomeError('切换或提交后工作区仍有改动')
+    await this.verifyPosition(expected)
+  }
+
+  async verifyCommit(record, expected) {
+    const actual = await this.head()
+    const parents = (await this.command(['show', '-s', '--format=%P', actual, '--'])).trim()
+    if (parents !== expected.head) throw this.outcomeError('新提交的父提交不是确认时的起点')
+    if ((await this.command(['rev-parse', `${actual}^{tree}`])).trim() !== record.checkpoint.tree) throw this.outcomeError('新提交内容不同于提交前检查点')
+    if (record.backup && (await this.command(['rev-parse', '--verify', `refs/heads/${record.backup}`])).trim() !== expected.head) throw this.outcomeError('备份引用已变化')
+    await this.verifyCheckout({ head: actual, branch: expected.branch })
+  }
+
   async recorded(action, params, expected, runAction, previous) {
     const record = previous || await this.journal.begin(action, params, expected)
     if (previous) { record.state = 'running'; record.attempts += 1; record.updatedAt = Date.now(); await this.journal.save(record) }
@@ -238,7 +260,7 @@ class GitService {
       return this.recorded(record.action, record.params, expected, async () => {
         await this.checkCheckpoint(record, expected)
         await this.command(['commit', '-m', record.checkpoint.message], { timeout: 120000 })
-        if ((await this.command(['rev-parse', 'HEAD^{tree}'])).trim() !== record.checkpoint.tree) throw new Error('提交已创建，但钩子改变了结果，请检查新提交与检查点的差异。')
+        await this.verifyCommit(record, expected)
         return { message: '失败操作已继续提交，原备份保留。', backup: record.backup }
       }, record)
     })
@@ -287,6 +309,7 @@ class GitService {
       await this.validateBranch(params.name)
       target = (await this.command(['rev-parse', '--verify', `refs/heads/${params.name}`])).trim()
       await this.assertOid(target)
+      operation.oid = target
       operation.name = params.name
     } else {
       target = await this.assertOid(params.oid); operation.oid = target
@@ -329,7 +352,7 @@ class GitService {
     const op = plan.operation
     if (op.expected.repo !== this.root) throw new Error('仓库已变化，请重新预览操作。')
     if (op.action === 'createBranch') return this.createBranch(op.oid, op.name, op.expected)
-    if (op.action === 'switchBranch') return this.switchBranch(op.name, op.expected)
+    if (op.action === 'switchBranch') return this.switchBranch(op.name, op.expected, op.oid)
     if (op.action === 'createWorktree') return this.createWorktree(op.oid, op.name, op.directory, op.expected)
     if (op.action === 'resumeCommit') return this.resumeCommit(op.id, op.expected, op.checkpoint)
     if (op.action === 'restore') return this.restore(op.oid, op.expected)
@@ -353,18 +376,23 @@ class GitService {
       await this.assertOid(oid); await this.validateBranch(name); await this.guard(expected, false)
       return this.recorded('createBranch', { oid, name }, expected, async () => {
         await this.command(['branch', '--', name, oid])
+        if ((await this.command(['rev-parse', '--verify', `refs/heads/${name}`])).trim() !== oid) throw this.outcomeError('新分支没有指向确认的存档')
+        await this.verifyPosition(expected)
         return { message: `已创建分支 ${name}；当前工作区保持不变。` }
       })
     })
   }
 
-  async switchBranch(name, expected) {
+  async switchBranch(name, expected, target) {
     return this.exclusive(async () => {
       await this.validateBranch(name); await this.guard(expected)
       await this.fullCheckout()
-      await this.command(['show-ref', '--verify', `refs/heads/${name}`])
+      const currentTarget = (await this.command(['rev-parse', '--verify', `refs/heads/${name}`])).trim()
+      if (target && currentTarget !== target) throw new Error('目标分支已变化，请重新预览。')
+      target = target || currentTarget
       return this.recorded('switchBranch', { name }, expected, async () => {
         await this.command(['switch', '--no-guess', '--no-overwrite-ignore', '--', name])
+        await this.verifyCheckout({ head: target, branch: name })
         return { message: `已切换到 ${name}，工作文件已同步。` }
       })
     })
@@ -379,6 +407,8 @@ class GitService {
         const folder = path.join(parent, `${path.basename(this.root)}-${oid.slice(0, 7)}-${randomUUID().slice(0, 8)}`)
         record.worktree = folder; await this.journal.save(record)
         await this.command(['worktree', 'add', '-b', name, '--', folder, oid])
+        await new GitService(folder, this.git).verifyCheckout({ head: oid, branch: name })
+        await this.verifyPosition(expected)
         return { message: `已创建独立试验线 ${name}，原工作区未切换。`, worktree: folder }
       })
     })
@@ -388,22 +418,24 @@ class GitService {
     return this.exclusive(async () => {
       await this.assertOid(oid); await this.guard(expected)
       await this.checkRestore(oid, expected)
+      const targetTree = (await this.command(['rev-parse', `${oid}^{tree}`])).trim()
       return this.recorded('restore', { oid }, expected, async record => {
       const backup = `gitviz/backup-${new Date().toISOString().replace(/[-:.TZ]/g, '')}-${randomUUID().slice(0, 6)}`
       record.backup = backup; await this.journal.save(record)
       await this.guard(expected)
       await this.command(['branch', '--', backup, expected.head])
       try {
+        await this.guard({ ...expected, revision: undefined })
         await this.command(['restore', `--source=${oid}`, '--staged', '--worktree', '--', '.'])
         const message = `Restore snapshot ${oid.slice(0, 7)}\n\nGitviz restore of ${oid}; previous HEAD preserved on ${backup}.`
         await this.journal.checkpoint(record, message)
+        if (record.checkpoint.tree !== targetTree) { delete record.checkpoint; throw this.outcomeError('恢复暂存内容不同于目标存档，尚未提交') }
+        await this.checkCheckpoint(record, { ...expected, revision: undefined })
         await this.command(['commit', '-m', message], { timeout: 120000 })
       } catch (error) {
         throw new Error(`恢复未完成：${error.message}\n恢复前版本保存在 ${backup}。已产生的文件/暂存更改会保留，请检查 Git 状态并解决问题后提交；没有自动丢弃文件。`, { cause: error })
       }
-      const expectedTree = (await this.command(['rev-parse', `${oid}^{tree}`])).trim()
-      const actualTree = (await this.command(['rev-parse', 'HEAD^{tree}'])).trim()
-      if (actualTree !== expectedTree) throw new Error(`已创建提交，但提交钩子修改了文件，结果与所选存档不完全相同。请检查差异；恢复前版本保存在 ${backup}。`)
+      await this.verifyCommit(record, expected)
       return { message: `已恢复为新提交，原历史保留在 ${backup}。`, backup, head: await this.head() }
       })
     })
