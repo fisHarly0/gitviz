@@ -12,6 +12,7 @@ const defaultSelection = snapshot => snapshot.commits.find(commit => commit.oid 
 export default function VersionTree({ bridge, hostName = 'VS Code', busyHint = '正在处理，请留意 VS Code 顶部的输入或确认提示…' }) {
   const [snapshot, setSnapshot] = useState(null), [selected, setSelected] = useState(null)
   const [detail, setDetail] = useState(null), [comparison, setComparison] = useState(null)
+  const [detailRevision, setDetailRevision] = useState(0), [comparisonRevision, setComparisonRevision] = useState(0)
   const [comparing, setComparing] = useState(false), [compareOids, setCompareOids] = useState([])
   const [query, setQuery] = useState(''), [focusOid, setFocusOid] = useState(null)
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false)
@@ -45,16 +46,24 @@ export default function VersionTree({ bridge, hostName = 'VS Code', busyHint = '
   useEffect(() => {
     if (!selected) return
     let cancelled = false
-    bridge.request('detail', { oid: selected }).then(value => { if (!cancelled) setDetail(value) }).catch(reason => { if (!cancelled) setError(reason.message) })
+    const update = result => { if (!cancelled) setDetail({ snapshot, oid: selected, revision: detailRevision, ...result }) }
+    bridge.request('detail', { oid: selected }).then(value => {
+      if (value.oid !== selected) throw new Error('返回的详情与所选存档不一致，请重新读取。')
+      update({ value })
+    }).catch(reason => update({ error: reason.message || String(reason) }))
     return () => { cancelled = true }
-  }, [bridge, selected, snapshot])
+  }, [bridge, selected, snapshot, detailRevision])
 
   useEffect(() => {
     if (compareOids.length !== 2) return
     let cancelled = false
-    bridge.request('compare', { from: compareOids[0], to: compareOids[1] }).then(value => { if (!cancelled) setComparison(value) }).catch(reason => { if (!cancelled) setError(reason.message) })
+    const update = result => { if (!cancelled) setComparison({ snapshot, from: compareOids[0], to: compareOids[1], revision: comparisonRevision, ...result }) }
+    bridge.request('compare', { from: compareOids[0], to: compareOids[1] }).then(value => {
+      if (value.from !== compareOids[0] || value.to !== compareOids[1]) throw new Error('返回的比较与所选版本不一致，请重新比较。')
+      update({ value })
+    }).catch(reason => update({ error: reason.message || String(reason) }))
     return () => { cancelled = true }
-  }, [bridge, compareOids, snapshot])
+  }, [bridge, compareOids, snapshot, comparisonRevision])
 
   const select = (oid, shift = false) => {
     if (!oid) return
@@ -94,9 +103,19 @@ export default function VersionTree({ bridge, hostName = 'VS Code', busyHint = '
   }
   const resetCompare = () => { setComparing(false); setCompareOids([]) }
   const returnToHead = () => { resetCompare(); setSelected(snapshot.head); setQuery(''); setFocusOid(null); setMapReset(value => value + 1) }
-  const viewing = detail?.oid === selected ? detail : null
-  const comparingReady = comparing && compareOids.length === 2 && comparison?.from === compareOids[0] && comparison?.to === compareOids[1]
-  const changes = comparing ? comparingReady ? comparison : null : viewing
+  const detailResult = detail?.snapshot === snapshot && detail.oid === selected && detail.revision === detailRevision ? detail : null
+  const comparisonResult = comparison?.snapshot === snapshot && comparison.from === compareOids[0] && comparison.to === compareOids[1] && comparison.revision === comparisonRevision ? comparison : null
+  const viewing = detailResult?.value
+  const changes = comparing ? compareOids.length === 2 ? comparisonResult?.value : null : viewing
+  const readError = comparing ? compareOids.length === 2 && comparisonResult?.error : detailResult?.error
+  const waitingForSelection = comparing && compareOids.length < 2
+  const reading = !waitingForSelection && !changes && !readError
+  const retryRead = event => {
+    // Keep keyboard focus in this stable region when the retry button disappears.
+    event.currentTarget.closest('.file-changes').focus()
+    if (comparing) setComparisonRevision(value => value + 1)
+    else setDetailRevision(value => value + 1)
+  }
   const selectedCommit = snapshot?.commits.find(commit => commit.oid === selected)
   const localRefs = snapshot?.branches.filter(ref => !ref.remote && ref.oid === selected && ref.name !== snapshot.branch) || []
   const writeBlocked = busy || !snapshot?.writable || !selected
@@ -125,7 +144,12 @@ export default function VersionTree({ bridge, hostName = 'VS Code', busyHint = '
           <OperationHistory key={`operations-${snapshot.repo}`} load={params => bridge.request('operations', params)} onResume={record => act('resumeCommit', { id: record.id })} refreshKey={operationRevision} blocked={busy || !snapshot.writable}/>
           <div className="changes-heading"><h3>文件变化</h3><span>{changes?.files.length ?? '—'}</span></div>
           <p className="comparison-baseline">{comparing ? <>从 A <code>{short(compareOids[0])}</code> 到 B <code>{short(compareOids[1])}</code>，不含未提交修改。</> : <>这次提交相对{viewing?.parents.length ? <>父提交 <code>{short(viewing.parents[0])}</code></> : '父版本'}的变化，不是与当前工作文件比较。</>}</p>
-          <div className="file-changes">{!changes ? <p className="quiet-text">{comparing && compareOids.length < 2 ? '选好两个节点后，差异会显示在这里。' : '正在读取文件变化…'}</p> : changes.files.length === 0 ? <div className="no-changes"><Icon name="check"/><p>文件内容相同</p></div> : changes.files.map(file => <button key={file.path} className="file-change" disabled={busy} title={`${file.status === 'R' ? `${file.oldPath} → ` : ''}${file.path} · 在编辑器中比较`} onClick={() => act('openDiff', { from: changes.from, to: changes.to, path: file.path })}><span className={`file-status status-${file.status}`}>{file.status}</span><span className="file-name">{file.path}<small>{statusLabels[file.status] || file.status}</small></span><Icon name="arrow" size={14}/></button>)}</div><p className="diff-tip">点文件，在 {hostName} 中查看前后差异。</p>
+          <div className="file-changes" role="region" aria-label="文件变化" tabIndex={-1} aria-busy={reading}>
+            {readError ? <div className="inspection-error"><div role="alert"><strong>{comparing ? '暂时无法比较这两个存档' : '暂时无法读取存档详情'}</strong><p>{readError}</p></div><button disabled={busy} onClick={retryRead}>{comparing ? '重新比较' : '重试读取详情'}</button></div>
+              : !changes ? <p className="quiet-text" role="status">{waitingForSelection ? '选好两个节点后，差异会显示在这里。' : comparing ? '正在比较两个存档…' : '正在读取文件变化…'}</p>
+                : changes.files.length === 0 ? <div className="no-changes" role="status"><Icon name="check"/><p>文件内容相同</p></div>
+                  : changes.files.map(file => <button key={file.path} className="file-change" disabled={busy} title={`${file.status === 'R' ? `${file.oldPath} → ` : ''}${file.path} · 在编辑器中比较`} onClick={() => act('openDiff', { from: changes.from, to: changes.to, path: file.path })}><span className={`file-status status-${file.status}`}>{file.status}</span><span className="file-name">{file.path}<small>{statusLabels[file.status] || file.status}</small></span><Icon name="arrow" size={14}/></button>)}
+          </div>{changes?.files.length > 0 && <p className="diff-tip">点文件，在 {hostName} 中查看前后差异。</p>}
         </aside></main>
     </>}
     <footer className="tree-status"><span><Icon name="tree" size={13}/>{snapshot.repo ? `${snapshot.branches.filter(ref => !ref.remote).length} 条本地分支 · ${snapshot.tags.length} 个标签` : '等待打开仓库'}</span><span>{!snapshot.repo ? '尚未读取历史' : snapshot.headPinned ? '较旧的当前位置已保留 · 部分历史未载入' : snapshot.truncated ? `已加载 ${snapshot.commits.length} / ${snapshot.total ?? '—'} 个存档` : '已加载可达历史'}<span className="map-heading-note"> · 点选预览，操作前确认</span></span></footer>

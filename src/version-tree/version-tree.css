@@ -146,6 +146,11 @@ body.vscode-light .version-tree {
 .changes-heading h3 { font-size: 12px; font-weight: 600; }
 .changes-heading > span { color: var(--tree-dim); font-variant-numeric: tabular-nums; }
 .file-changes { padding: 0 9px; }
+.file-changes:focus-visible { outline: 2px solid var(--tree-focus); outline-offset: -2px; }
+.inspection-error { padding: 10px 11px; font-size: 13px; line-height: 1.6; }
+.inspection-error [role="alert"] { color: var(--vscode-errorForeground, #ff9d9d); overflow-wrap: anywhere; }
+.inspection-error p { margin: 6px 0 12px; white-space: pre-wrap; }
+.inspection-error button { min-height: 36px; }
 .version-tree .file-change { width: 100%; border: 0; background: transparent; padding: 9px 11px; text-align: left; border-radius: 4px; }
 .file-status { font-size: 10px; font-weight: 700; width: 15px; color: var(--tree-amber); flex-shrink: 0; }
 .status-A { color: var(--tree-green); }.status-D { color: var(--tree-pink); }

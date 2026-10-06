@@ -62,10 +62,14 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
     if (!node || !element) return
     const previous = lastLocation.current
     if (previous?.oid === oid && previous.navigation === navigation && previous.external === locateOid && previous.scale === scale && previous.horizontal === horizontal && previous.width === box.width && previous.height === box.height) return
+    const moveFocus = previous && (previous.oid !== oid || previous.navigation !== navigation || previous.external !== locateOid)
     lastLocation.current = { oid, navigation, external: locateOid, scale, horizontal, width: box.width, height: box.height }
-    pendingFocus.current = oid
+    pendingFocus.current = moveFocus ? oid : null
     element.scrollTo({ left: Math.max(0, (node.x + 94) * scale - element.clientWidth / 2), top: Math.max(0, node.y * scale - 90), behavior: 'instant' })
-    requestAnimationFrame(() => element.querySelector(`[data-oid="${oid}"]`)?.focus({ preventScroll: true }))
+    if (moveFocus) {
+      const frame = requestAnimationFrame(() => element.querySelector(`[data-oid="${oid}"]`)?.focus({ preventScroll: true }))
+      return () => cancelAnimationFrame(frame)
+    }
   }, [selected, navigation, locateOid, byId, scale, horizontal, box.width, box.height])
   const matches = node => node.folded ? node.members.some(oid => matching.has(oid)) : matching.has(node.oid)
   const zoom = amount => setScale(value => Math.max(0.35, Math.min(1.6, Math.round((value + amount) * 100) / 100)))
