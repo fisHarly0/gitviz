@@ -664,7 +664,24 @@ code {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-elev);
+  flex-shrink: 0;
 }
+.branch-navigation { display: flex; align-items: flex-start; gap: 8px; }
+.branch-disclosure { flex: 1; min-width: 0; }
+.branch-disclosure > summary { cursor: pointer; min-height: 32px; padding: 6px 0; font-size: 12px; overflow-wrap: anywhere; }
+.branch-disclosure .branch-current { display: inline-flex; max-width: calc(100% - 16px); vertical-align: bottom; }
+.branch-current > span { flex-shrink: 0; }
+.branch-disclosure > summary strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.branch-disclosure .branch-count { display: block; margin-left: 12px; }
+.branch-count { color: var(--text-dim); white-space: nowrap; }
+.branch-disclosure > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.branch-disclosure .if-lines-row { padding: 8px 2px; }
+.branch-disclosure .if-lines-row .lbl { flex-basis: 100%; letter-spacing: normal; text-transform: none; }
+.branch-navigation .export-slot { flex-shrink: 0; max-width: 40%; min-width: 0; padding-top: 4px; flex-wrap: wrap; }
+.branch-navigation .export-btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.branch-navigation .export-error { overflow-wrap: anywhere; }
+.mode-status-bar .status-branch { display: inline-block; max-width: min(36ch, 45vw); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.preview-banner .return-btn { max-width: min(100%, 48ch); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .if-lines-row {
   display: flex;
   flex-wrap: wrap;

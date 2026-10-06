@@ -21,7 +21,7 @@ export default function ModeStatusBar({
       <>
         <span className="tag browse">浏览</span>
         <span>
-          {headOid ? <>{readOnly ? '远程浏览基准' : '实际位置'} <code>{currentBranch || '游离 HEAD'}</code> · {readOnly ? '' : 'HEAD '}<code>{short(headOid)}</code></> : readOnly ? '正在读取远程分支' : '尚无可显示的 HEAD'}
+          {headOid ? <>{readOnly ? '远程浏览基准' : '实际位置'} <code className="status-branch" title={currentBranch || '游离 HEAD'}>{currentBranch || '游离 HEAD'}</code> · {readOnly ? '' : 'HEAD '}<code>{short(headOid)}</code></> : readOnly ? '正在读取远程分支' : '尚无可显示的 HEAD'}
         </span>
       </>
     )
@@ -42,7 +42,7 @@ export default function ModeStatusBar({
       <>
         <span className="tag edit">编辑</span>
         <span>
-          试验分支 <code>{currentIfBranch}</code> · 本次已提交 {changedFilesInIf} 次 · 保存并提交会写入工作文件
+          试验分支 <code className="status-branch" title={currentIfBranch}>{currentIfBranch}</code> · 本次已提交 {changedFilesInIf} 次 · 保存并提交会写入工作文件
         </span>
       </>
     )

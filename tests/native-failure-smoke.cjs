@@ -69,7 +69,7 @@ const { GitService } = require('../extensions/vscode/git-service.cjs')
     await inspect('oldest'); await wait(async () => (await inspect('text')).includes('root-marker'), 'oldest selected')
 
     // Git itself refuses a branch checked out elsewhere; the UI must surface it.
-    if (host === 'desktop') await click(name, '.branch-chip')
+    if (host === 'desktop') { await page.locator('.branch-disclosure > summary').click(); await click(name, '.branch-chip') }
     else await click('切换到 ' + name)
     await dialog.waitFor(); await button(host === 'desktop' ? '确认操作' : '切换分支').click()
     await wait(async () => /worktree|already checked out/i.test(await inspect('alert')), 'occupied branch error')

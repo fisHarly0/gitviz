@@ -22,6 +22,7 @@
 - [x] 实装 VSIX 的无效 git.path 原生提示、修正配置并重载后读取真实历史；DSH 缺失服务 PATH、恢复并重启后读取历史。均核对 HEAD/refs/工作区未变化。DSH 未打开仓库不再误报工作区干净或历史已加载。
 - [x] 首次使用、Git 安装/目录/PATH/宿主重启、GitHub 只读和更新指引，见 `docs/first-use.md`。
 - [x] 试验流程：插件直接比较 HEAD 与选中提交、退出预览；桌面/DSH 打开试验后按本次会话路径返回，VS Code 明确新窗口行为；差异基准与试验保留说明，桌面当前试验分支编辑入口及导航保护。验证范围见 `memory/handoff-2026-10-05-trial-journey.md`。
+- [x] 桌面地图空间与失败入口：分支按需展开，长名称不遮住 HEAD/状态，错误直达记录；1280×800 / 960×600 原生 WebView、2000 条历史与真实 hook 失败后继续通过，见 `memory/handoff-2026-10-07-desktop-workspace.md`。不替代陌生用户试用与新发行包验收。
 - [ ] 剩余语言与全面可访问性审查、陌生用户试用，以及最终发行包的首次使用复验；GitHub 在线错误与 live 回归见下一项，以上子项不关闭完整 P2。
 - [x] GitHub 只读地图复用全部父边/折叠/搜索/键盘，远程浏览基准文案、受控权限/限流/断网/部分失败与重试、缺失 patch 提示；31 项测试、三端前端构建、Windows Integrated Browser 受控场景通过。额度恢复后加强的真实 live 详情、键盘返回及宽窄视口断言通过，见 `live-recovered.log` 和 `memory/handoff-2026-10-05-github-readonly.md`。不关闭全面可访问性与最终包子项。
 - [x] VS Code/DSH 共享检查器的详情/比较错误、就地重试与版本绑定；地图被动布局变化不抢焦点。实际构建前端的 Integrated Browser 受控桥接验证覆盖键盘、迟到响应、仓库切换、空比较和宽窄布局，见 `memory/handoff-2026-10-06-inspection-errors.md`；最终实装宿主与屏幕阅读器验收仍保留。

@@ -4,7 +4,7 @@ const actions = { createBranch: '创建分支', switchBranch: '切换分支', cr
 const states = { running: '进行中或已中断', completed: '已完成', failed: '未完成', unreadable: '记录无法读取' }
 const text = value => typeof value === 'string' ? value : ''
 
-export default function OperationHistory({ load, onResume, refreshKey, blocked, editing }) {
+export default function OperationHistory({ load, onResume, refreshKey, blocked, editing, detailsRef }) {
   const [open, setOpen] = useState(false), [records, setRecords] = useState([]), [cursor, setCursor] = useState(null)
   const [loading, setLoading] = useState(false), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   const sequence = useRef(0)
@@ -39,7 +39,7 @@ export default function OperationHistory({ load, onResume, refreshKey, blocked, 
     catch (reason) { setError(reason.message || String(reason)) }
     finally { setRevision(value => value + 1) }
   }
-  return <details className="operation-history" onToggle={event => { if (event.target === event.currentTarget) setOpen(event.currentTarget.open) }}>
+  return <details ref={detailsRef} className="operation-history" onToggle={event => { if (event.target === event.currentTarget) setOpen(event.currentTarget.open) }}>
     <summary>操作记录与恢复</summary>
     {open && <div className="operation-history-content">
       <div className="operation-history-toolbar"><span>当前工作区的记录，重新打开后仍可查看。</span><button disabled={loading || blocked} onClick={() => { setError(''); setRevision(value => value + 1) }}>刷新记录</button></div>

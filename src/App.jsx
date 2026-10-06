@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import RepoLoader from './components/RepoLoader.jsx'
@@ -22,6 +22,7 @@ export default function App() {
   const [branches, setBranches] = useState([])
   const [refreshKey, setRefreshKey] = useState(0) // commit 后 ++ 触发 CommitGraph 重新拉
   const [recoveryRevision, setRecoveryRevision] = useState(0)
+  const operationHistory = useRef(null)
   const [dragOver, setDragOver] = useState(false)
   const [dropError, setDropError] = useState('')
   const [repoSnapshot, setRepoSnapshot] = useState(null)
@@ -208,12 +209,19 @@ export default function App() {
             editing={Boolean(session.editingFile)}
             onRefresh={handleCommitted}
             onOpenWorktree={path => openLocalPath(path, [...repoTrail, adapter.repo])}
+            onOpenRecords={() => {
+              const records = operationHistory.current
+              if (!records) return
+              records.open = true
+              records.querySelector('summary')?.focus({ preventScroll: true })
+              records.scrollIntoView({ block: 'nearest' })
+            }}
             onResult={(result, action) => {
               if (action === 'restore') session.switchToBranch(result.branch, result.head)
               handleCommitted()
             }}
           />}
-          {adapter.kind() === 'local' && <OperationHistory key={`operations-${adapter.historyId}`} load={params => adapter.historyRequest('operations', params)} refreshKey={repoSnapshot} blocked={blocked} editing={Boolean(session.editingFile)} onResume={async record => {
+          {adapter.kind() === 'local' && <OperationHistory detailsRef={operationHistory} key={`operations-${adapter.historyId}`} load={params => adapter.historyRequest('operations', params)} refreshKey={repoSnapshot} blocked={blocked} editing={Boolean(session.editingFile)} onResume={async record => {
             try {
               const result = await adapter.performAction({ action: 'resumeCommit', id: record.id }, { head: session.headOid, branch: session.currentBranch })
               if (!result.cancelled) {

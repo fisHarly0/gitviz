@@ -88,7 +88,7 @@ Notes:
   return (
     <>
       <button onClick={handleExport} disabled={busy || disabled} className="export-btn" title={`将 ${branchName} 导出为 .zip`}>
-        {busy ? '正在打包…' : `导出 ${branchName}`}
+        {busy ? '正在打包…' : '导出分支'}
       </button>
       {error && <span className="export-error">! {error}</span>}
     </>

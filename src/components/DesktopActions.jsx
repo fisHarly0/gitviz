@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import './desktop-actions.css'
 
-export default function DesktopActions({ adapter, oid, snapshot, blocked, editing, onResult, onRefresh, onOpenWorktree }) {
+export default function DesktopActions({ adapter, oid, snapshot, blocked, editing, onResult, onRefresh, onOpenWorktree, onOpenRecords }) {
   const [draft, setDraft] = useState(null), [error, setError] = useState(''), [result, setResult] = useState(null)
   const [pending, setPending] = useState(false), active = useRef(false)
   const disabled = blocked || pending || !snapshot?.head || !oid
@@ -56,7 +56,7 @@ export default function DesktopActions({ adapter, oid, snapshot, blocked, editin
       <div className="desktop-action-buttons"><button type="submit" disabled={disabled}>预览{form.action === 'createWorktree' ? '试验工作区' : '分支创建'}</button><button type="button" disabled={disabled} onClick={() => setDraft(null)}>取消填写</button></div>
     </form>}
     {pending && <p role="status">正在处理，请查看操作确认。</p>}
-    {error && <div role="alert" className="desktop-action-error"><p>{error}</p><button disabled={disabled} onClick={onRefresh}>刷新实际状态</button></div>}
+    {error && <div role="alert" className="desktop-action-error"><p><strong>操作未完成</strong>，请先检查实际状态与操作记录。</p><details><summary>查看错误详情</summary><p>{error}</p></details><div className="desktop-action-buttons"><button disabled={blocked || pending} onClick={onOpenRecords}>查看操作记录</button><button disabled={blocked || pending} onClick={onRefresh}>刷新实际状态</button></div></div>}
     {result && <div className="desktop-action-result" role="status">
       {result.action === 'createBranch' && <p>已创建分支 <strong>{result.name}</strong>，当前文件未切换。可从分支栏切换。</p>}
       {result.worktree && <><p>试验工作区已创建，原仓库保持不变。</p><code>{result.worktree}</code><p>打开后可从顶部返回上个仓库，试验目录会保留。</p><button disabled={disabled} onClick={openWorktree}>在地图中打开试验工作区</button></>}

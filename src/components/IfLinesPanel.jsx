@@ -51,8 +51,11 @@ export default function IfLinesPanel({
 
   return (
     <div className="if-lines-panel">
+      <div className="branch-navigation">
+      <details className="branch-disclosure">
+        <summary><span className="branch-current"><span>{readOnly ? '浏览分支' : '当前分支'}：</span><strong title={currentBranch || '游离 HEAD'}>{currentBranch || '游离 HEAD'}</strong></span><span className="branch-count">{branches.length} 个分支 · {readOnly ? '选择' : '切换'}</span></summary>
       <div className="if-lines-row">
-        <span className="lbl">{readOnly ? '远程分支' : '本地分支'}</span>
+        <span className="lbl">{readOnly ? '只读浏览，不切换工作文件' : '选择分支后确认切换；工作文件也会更新'}</span>
         {mainRef && (
           <button
             className={`branch-chip main ${currentBranch === mainBranch ? 'active' : ''}`}
@@ -83,6 +86,8 @@ export default function IfLinesPanel({
         {otherBranches.length === 0 && (
           <span className="empty-hint">{adapter.kind() === 'local' ? '选择存档，可建分支或在独立目录试一版。' : 'GitHub 仓库只读。'}</span>
         )}
+      </div>
+      </details>
         {isIfBranch(currentBranch) && typeof adapter.exportBranchAsBundle === 'function' && (
           <span className="export-slot">
             <ExportButton adapter={adapter} branchName={currentBranch} disabled={busy || editing} />

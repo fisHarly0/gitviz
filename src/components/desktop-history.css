@@ -6,9 +6,26 @@
 .desktop-history-tools { display: flex; gap: 8px; }
 .desktop-history-tools button[aria-pressed="true"] { border-color: var(--tree-green); color: var(--tree-green); }
 .desktop-history-position { padding: 8px 12px; font-size: 11px; color: var(--tree-dim); border-bottom: 1px solid var(--tree-border); }
+.desktop-history-position { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; flex-shrink: 0; }
+.history-actual { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; white-space: nowrap; }
+.history-actual strong { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; font-weight: inherit; }
+.history-actual code { flex-shrink: 0; }
 .desktop-history .history-progress { padding: 8px 12px; }
 .desktop-history .history-progress > span { flex-basis: 100%; }
 .desktop-history .map-heading { padding: 12px; }
+.app:has(.desktop-history) .split { grid-template-columns: minmax(420px, 48%) minmax(0, 1fr); }
+.graph-pane:has(.desktop-history) { padding-top: 0; }
+.desktop-history .tree-search { flex: 1 1 220px; }
+.desktop-history .tree-tools { gap: 8px; }
+.desktop-history .map-navigation { padding: 8px 12px; }
+@media (max-height: 700px) {
+  .desktop-history .map-heading { padding: 6px 12px; }
+  .desktop-history .map-navigation { padding: 4px 12px; }
+  .desktop-history .map-projection-note { margin: 4px 0 0; }
+  .desktop-history .history-progress { padding: 4px 12px; }
+  .desktop-history .tree-tools { padding: 6px 10px; }
+  .desktop-history-position { padding: 4px 12px; }
+}
 .github-history .github-scope { margin: 0; padding: 8px 12px; color: var(--tree-dim); font-size: 12px; }
 .github-history .github-warnings { margin: 8px 12px; font-size: 12px; color: var(--tree-amber); }
 .github-warnings summary { cursor: pointer; }
