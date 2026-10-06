@@ -45,6 +45,7 @@ try {
     & pwsh -NoProfile -File (Join-Path $PSScriptRoot '../tests/helpers/request-desktop-close.ps1') -AppProcessId $application.Id -ExpectedExecutable $executable
     if ($LASTEXITCODE -ne 0) { throw 'Could not request normal window close' }
     if (!$application.WaitForExit(15000)) { throw 'Installed application did not close normally' }
+    if ($application.ExitCode -ne 0) { throw "Installed application exited abnormally: $($application.ExitCode)" }
     $application = $null
   }
 } finally {

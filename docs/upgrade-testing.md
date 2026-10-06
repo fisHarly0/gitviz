@@ -86,6 +86,10 @@ Windows 的 DeepSeek Harness 0.2.0-rc.2 Web profile 已实测原 0.2.0 tarball �
 
 路径按实际产物替换；需 PowerShell 7、Node、Git 和已有 Playwright Core，仅连接原生 WebView2。`TestRoot` 必须不存在，检测到已有 Gitviz 安装或 9348 端口占用时拒绝执行。脚本正常关闭自己的应用、卸载测试安装并恢复临时环境变量。
 
+若升级程序等待原生 WebView 超时，会在测试进程仍存活时采集窗口、线程、模块及小型进程转储到该测试目录；仅检查与预期 exe 匹配的 PID。采集失败不覆盖原启动错误，正常关闭另外核对退出码 0。转储只来自隔离验收进程，不自动上传；这是定位能力，不代表间歇性启动问题已修复。
+
+后续 d438d00 的 Windows CI 曾在初始页面就绪后打开仓库超时，不能算作安装验收通过。首次安装驱动现通过可见路径输入和打开按钮进入仓库，并保留失败页面截图/状态；本地同源 NSIS 的首次安装、重装和卸载通过，新 CI 仍需确认。该次与“原生窗口没有出现”的启动风险分别跟踪。
+
 实测证据：`F:/Codex/work/gitviz-product/desktop upgrade confirmed/` 中三阶段 `result-*.json`、PNG、确认文本、失败检查点及 `desktop-migration-result.json`。安装程序和 raw exe 的 SHA 见发行验证清单；安装后的 exe 仅存在 Tauri NSIS 已知类型标记差异，其他字节全部一致，校验方式见 [工程交付说明](delivery.md)。加入该校验的首次安装/重装驱动也在 `installer-payload-check/` 完整通过。
 
 ## 仍需验收

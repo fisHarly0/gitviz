@@ -78,11 +78,20 @@ try {
       Start-Sleep -Milliseconds 500
     }
     @{ phase = $phase; processId = $application.Id; executable = $executable; ready = $ready; exited = $application.HasExited; exitCode = $application.ExitCode; elapsedMs = $startup.ElapsedMilliseconds } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root "startup-$phase.json")
-    if (!$ready) { throw "Native WebView did not start: $phase" }
+    if (!$ready) {
+      if (!$application.HasExited) {
+        try {
+          & pwsh -NoProfile -File (Join-Path $PSScriptRoot '../tests/helpers/capture-desktop-startup.ps1') -AppProcessId $application.Id -ExpectedExecutable $executable -OutputDirectory (Join-Path $root "startup-$phase-diagnostics") -IncludeDump
+          if ($LASTEXITCODE -ne 0) { Write-Warning 'Startup diagnostics failed; retain the startup status and native logs.' }
+        } catch { Write-Warning "Startup diagnostics failed: $_" }
+      }
+      throw "Native WebView did not start: $phase"
+    }
     & node $test $phase
     if ($LASTEXITCODE -ne 0) { throw "Desktop migration phase failed: $phase" }
     & pwsh -NoProfile -File (Join-Path $PSScriptRoot '../tests/helpers/request-desktop-close.ps1') -AppProcessId $application.Id -ExpectedExecutable $executable
     if ($LASTEXITCODE -ne 0 -or !$application.WaitForExit(15000)) { throw "Desktop did not close normally: $phase" }
+    if ($application.ExitCode -ne 0) { throw "Desktop exited abnormally: $phase ($($application.ExitCode))" }
     $application = $null
   }
 } finally {

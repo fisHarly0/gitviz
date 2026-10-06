@@ -161,3 +161,5 @@ npm run build
 作者：[fisHarly0](https://github.com/fisHarly0)。采用 [MIT License](LICENSE)，第三方依赖保留各自许可证。
 
 欢迎通过 [Issues](https://github.com/fisHarly0/gitviz/issues) 提交问题和建议；安全问题请按 [安全反馈说明](SECURITY.md) 报告。
+
+首次试用可按 [试用任务与反馈表](docs/usability-trial.md) 记录具体卡点；[可访问性检查进展](docs/accessibility.md) 列出已发现但尚未关闭的问题。
