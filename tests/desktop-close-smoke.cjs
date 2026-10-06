@@ -27,8 +27,8 @@ async function withApp(name, action) {
     cwd: out, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, TEMP: out, TMP: out, WEBVIEW2_USER_DATA_FOLDER: profile, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9248' },
   })
-  let exited = false, browser, log = ''
-  child.on('exit', () => { exited = true })
+  let exited = false, exitCode, exitSignal, browser, log = ''
+  child.on('exit', (code, signal) => { exited = true; exitCode = code; exitSignal = signal; log += `Native exit: code=${code}, signal=${signal}\n` })
   child.on('error', error => { log += error.message; exited = true })
   child.stdout.on('data', data => { log += data }); child.stderr.on('data', data => { log += data })
   try {
@@ -53,6 +53,8 @@ async function withApp(name, action) {
       throw error
     }
     assert.equal(exited, true, 'Each scenario must finish with a normal close')
+    assert.equal(exitCode, 0, 'Normal close must not be a native crash')
+    assert.equal(exitSignal, null, 'Normal close must not force-terminate the process')
   } finally {
     await browser?.close().catch(() => {})
     if (!exited) child.kill() // only the process launched by this scenario

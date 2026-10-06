@@ -2,7 +2,7 @@
 
 当前 0.3.0 仍为开发构建；这些检查不代表已正式发布。源码、安装包和插件包必须区分，不能用源码测试替代已安装程序的行为。
 
-## 最新固定构建：486dae3（2026-10-06）
+## 最新固定构建：486dae3（2026-10-07 复验）
 
 使用 [CI 37484149175](https://github.com/fisHarly0/gitviz/actions/runs/37484149175) 的实际产物，源提交、干净工作树标记、全部校验和及三平台插件一致性均已核对。完整文件名与 SHA-256 见 [验证清单](releases/0.3.0-validation-486dae3.json)。这批包含离线编辑器和后续地图、失败恢复修复；下方 `51a873c` 是历史证据。
 
@@ -12,9 +12,13 @@
 | Windows VS Code 1.140.0：原 0.2.0 → 本批 VSIX | 全流程通过；设置和 Git 状态保留，失败记录跨正常重启后继续成功 |
 | Windows DSH 0.2.0-rc.2 Web：原 0.2.0 → 本批 tarball | 全流程通过；安装文件与实际提供的客户端代码核对，启用状态及同标签页仓库保留，重启服务后继续成功 |
 | Windows 桌面离线编辑 | 全新 profile 阻断外部 HTTP(S)，五类 worker、许可文本、取消/保存、重启读取与两次关闭复验通过；此前退出超时已定位为测试误选 Tao 内部窗口，驱动已修正 |
-| 原桌面 0.2.0 免安装 → 本批 NSIS | 2000 条历史、隔离存储、包内容和失败检查点已验证；关闭目标修正后旧版正常退出；最新安装阶段 WebView 启动超时，本批完整升级流程尚未通过 |
+| 原桌面 0.2.0 免安装 → 本批 NSIS | 完整流程通过；两版读取 2000 条历史，隔离存储保留，安装版真实 hook 失败后正常重启并继续成功，卸载保留数据 |
 
 本机证据根目录：`F:/Codex/work/gitviz-product/release-486dae3/`。VS Code 最终成功记录位于 `vscode-upgrade-current-host/`，DSH 位于 `dsh-upgrade/`，桌面离线成功复验位于 `offline-editor-close-diagnostic/`；此前失败目录保留，不替换成成功证据。VS Code 驱动改为等候命令实际就绪后用键盘执行，并容许启动期间只读 Webview 文本查询的瞬时上下文切换，Git 与包内容断言保持不变。
+
+2026-10-07 桌面补验：`F:/Codex/work/gitviz-product/desktop-upgrade-20261007-confirmed/` 保存完整升级结果，`desktop-close-20261007/` 保存六组正常关闭保护结果；后者逐组断言原生退出码为 0 且没有终止信号，覆盖草稿、导出保存框、执行中的 hook 和失败提交现场。两项均使用上述固定 CI 产物。
+
+此前安装启动超时仍保留为风险：一次启动仅有 Tao 内部窗口、没有实际 Tauri 窗口；相同安装文件随后在旧/新 profile、快速连续重启和完整升级中通过。`desktop-startup-20261007/` 和 `desktop-profile-probe/` 保留失败及对照证据，尚未定位根因，没有修改生产启动逻辑。升级驱动新增启动日志和有界等待，不能将这些诊断改进描述为产品修复。
 
 ## Windows 桌面
 
@@ -86,4 +90,4 @@ Windows 的 DeepSeek Harness 0.2.0-rc.2 Web profile 已实测原 0.2.0 tarball �
 
 ## 仍需验收
 
-Windows 三宿主并发及缺少 Git 的恢复已有独立证据，见 [并发验证](native-concurrency-testing.md) 和 [首次使用](first-use.md)。仍须排查最新本机安装版 WebView 启动超时并完成完整升级复验，并完成其他操作系统的原生 UI、全面可访问性和陌生用户试用。用户默认 AppData 的实际迁移、签名、公证和正式外部发布不在上述检查范围内。
+Windows 三宿主并发及缺少 Git 的恢复已有独立证据，见 [并发验证](native-concurrency-testing.md) 和 [首次使用](first-use.md)。完整升级复验已通过；仍须定位间歇性 WebView 启动超时，并完成其他操作系统的原生 UI、全面可访问性和陌生用户试用。用户默认 AppData 的实际迁移、签名、公证和正式外部发布不在上述检查范围内。

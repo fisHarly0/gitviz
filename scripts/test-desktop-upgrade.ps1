@@ -67,15 +67,17 @@ try {
       $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'binary-comparison.json')
     }
     $executable = if ($phase -eq 'old') { $old } else { Join-Path $destination 'gitviz.exe' }
-    $application = Start-Process -FilePath $executable -WindowStyle Hidden -PassThru
+    $application = Start-Process -FilePath $executable -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $root "native-$phase.log") -RedirectStandardError (Join-Path $root "native-$phase.err")
     $ready = $false
-    for ($attempt = 0; $attempt -lt 90; $attempt++) {
+    $startup = [Diagnostics.Stopwatch]::StartNew()
+    while ($startup.Elapsed.TotalSeconds -lt 60 -and !$application.HasExited) {
       try {
         $pages = Invoke-RestMethod -Uri 'http://127.0.0.1:9348/json/list' -TimeoutSec 2
         if (@($pages | Where-Object url -Match 'tauri\.localhost').Count) { $ready = $true; break }
       } catch { }
       Start-Sleep -Milliseconds 500
     }
+    @{ phase = $phase; processId = $application.Id; executable = $executable; ready = $ready; exited = $application.HasExited; exitCode = $application.ExitCode; elapsedMs = $startup.ElapsedMilliseconds } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root "startup-$phase.json")
     if (!$ready) { throw "Native WebView did not start: $phase" }
     & node $test $phase
     if ($LASTEXITCODE -ne 0) { throw "Desktop migration phase failed: $phase" }

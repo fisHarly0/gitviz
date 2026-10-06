@@ -119,7 +119,7 @@
     "allOtherBytesIdentical": true
   },
   "remaining": [
-    "Latest installed desktop startup and whole cross-version migration; finish export/hook/failed-save close cases using the corrected window helper",
+    "Intermittent Windows native WebView startup timeout: full upgrade subsequently passed, root cause unresolved",
     "Linux/macOS native UI acceptance",
     "Complete accessibility review and unfamiliar-user usability",
     "Default AppData migration, signing/notarization and public release"
@@ -151,7 +151,7 @@
     "earlierFailure": "Earlier close timeout used Process.MainWindowHandle; diagnostics found it could target Tao Thread Event Target instead of Tauri Window. Corrected helper verified separately; retain failed evidence."
   },
   "desktopUpgrade": {
-    "latestAttempt": "incomplete",
+    "latestAttempt": "passed",
     "from": "0.2.0 portable",
     "to": "0.3.0 NSIS",
     "verified": [
@@ -159,15 +159,26 @@
       "2000 commits loaded and preview preserved repository state",
       "Shared isolated profile retained",
       "Cancelled restore preserved state",
-      "Real hook failure preserved checkpoint"
+      "Real hook failure preserved checkpoint",
+      "Whole old portable -> installed -> restarted sequence passed",
+      "2000 commits loaded in both versions; preferences preserved",
+      "Failed operation resumed after normal restart with expected parent, tree and backup",
+      "Uninstall preserved repository and isolated WebView data"
     ],
     "notVerified": [
-      "Whole latest-package upgrade/restart sequence"
+      "Default user AppData migration",
+      "Old NSIS upgrade (0.2.0 was portable)",
+      "Intermittent startup root cause"
     ],
-    "failure": "With corrected native-window targeting, the old portable phase closed normally; the latest installed phase did not expose a native WebView before the startup timeout. Full migration remains incomplete.",
     "evidence": "F:/Codex/work/gitviz-product/release-486dae3/desktop-upgrade/",
-    "latestEvidence": "F:/Codex/work/gitviz-product/release-486dae3/desktop-upgrade-final-verified/",
-    "oldVersionNormalCloseWithCorrectedHelper": true
+    "latestEvidence": "F:/Codex/work/gitviz-product/desktop-upgrade-20261007-confirmed/",
+    "oldVersionNormalCloseWithCorrectedHelper": true,
+    "earlierFailure": "With corrected native-window targeting, the old portable phase closed normally; the latest installed phase did not expose a native WebView before the startup timeout. Full migration remains incomplete.",
+    "startupDiagnostics": {
+      "failedEvidence": "F:/Codex/work/gitviz-product/desktop-startup-20261007/",
+      "controlEvidence": "F:/Codex/work/gitviz-product/desktop-profile-probe/",
+      "observation": "Failed installed launch remained alive with only Tao Thread Event Target and no Tauri Window. Same installed bytes subsequently started with reused and fresh profiles, and full migration passed. No production fix or root-cause claim."
+    }
   },
   "dshUpgrade": {
     "host": "DeepSeek Harness 0.2.0-rc.2 Web on Windows; VS Code 1.140.0 Integrated Browser",
@@ -191,21 +202,22 @@
     "evidence": "F:/Codex/work/gitviz-product/release-486dae3/window-target/"
   },
   "desktopCloseContract": {
-    "status": "incomplete",
+    "status": "passed on Windows; six native scenarios",
     "passedScenarios": [
       "clean startup",
       "untouched editor",
       "message-only and content drafts",
       "repeated close",
       "cancel and discard",
-      "960x600 keyboard confirmation"
-    ],
-    "remainingScenarios": [
+      "960x600 keyboard confirmation",
       "export/native save dialog",
       "active Git hook",
       "failed commit preservation"
     ],
-    "latestFailure": "WebView connection closed during export-scenario setup before the export action; preserve failure evidence",
-    "evidence": "F:/Codex/work/gitviz-product/release-486dae3/native-close-correct-window/"
+    "evidence": "F:/Codex/work/gitviz-product/desktop-close-20261007/",
+    "allNativeExitCodesZero": true,
+    "noTerminationSignal": true,
+    "earlierFailure": "WebView connection closed during export-scenario setup before the export action; preserve failure evidence",
+    "earlierEvidence": "F:/Codex/work/gitviz-product/release-486dae3/native-close-correct-window/"
   }
 }
