@@ -63,16 +63,36 @@ test('output, binary data, nonzero exit and missing executable are classified wi
   await assert.rejects(runGitProcess(process.execPath, ['-e', 'process.stdout.write("x".repeat(100000));setInterval(()=>{},1000)'], { maxBuffer: 1000 }), error => error.code === 'GIT_OUTPUT_LIMIT')
 })
 
-test('timed-out real restore kills hook descendants, retains checkpoint and can resume after fixing the hook', async () => {
+for (const reportFailure of [false, true]) test(`timed-out real restore preserves recovery (${reportFailure ? 'cleanup report failure' : 'native cleanup'})`, async t => {
   const f = await fixture(), original = f.git.command.bind(f.git)
-  let commitFailure
+  let commitFailure, owned
   f.git.command = async (args, options) => {
-    try { return await original(args, args[0] === 'commit' ? { ...options, timeout: 5000 } : options) }
+    try { return await original(args, args[0] === 'commit' ? {
+      ...options, timeout: 5000,
+      terminate: async child => {
+        owned = child
+        try { await terminateTree(child) }
+        catch (error) {
+          if (!reportFailure || process.platform !== 'win32' || error.code !== 128) throw error
+        }
+        if (reportFailure) throw Object.assign(new Error('injected failure to confirm cleanup'), { code: 'TEST_CLEANUP_FAILURE' })
+      },
+    } : options) }
     catch (error) { if (args[0] === 'commit') commitFailure = error; throw error }
   }
   try {
     await assert.rejects(f.git.restore(f.first, f.expected), /超过 5 秒/)
-    assert.equal(commitFailure?.code, 'GIT_TIMEOUT', commitFailure?.cleanupError?.stack || commitFailure?.stack)
+    const uncertain = commitFailure?.code === 'GIT_PROCESS_UNCERTAIN'
+    if (reportFailure) {
+      assert.equal(uncertain, true)
+      assert.equal(commitFailure.cleanupError?.code, 'TEST_CLEANUP_FAILURE')
+    } else if (uncertain) {
+      assert.equal(process.platform, 'win32')
+      assert.equal(commitFailure.cleanupError?.code, 128, commitFailure.cleanupError?.stack)
+    } else assert.equal(commitFailure?.code, 'GIT_TIMEOUT', commitFailure?.stack)
+    t.diagnostic(`cleanup outcome: ${commitFailure.code}; ${commitFailure.cleanupError?.code ?? 'confirmed'}`)
+    assert.ok(owned?.pid)
+    assert.equal(alive(owned.pid), false, 'fixture Git still runs')
     for (const name of ['parent', 'child']) {
       const pid = Number(await fs.readFile(path.join(f.folder, `.git/process-${name}.pid`), 'utf8'))
       assert.equal(alive(pid), false, `hook ${name} is still alive`)
@@ -84,11 +104,37 @@ test('timed-out real restore kills hook descendants, retains checkpoint and can 
     const record = (await f.git.operations()).records[0]
     assert.equal(record.state, 'failed'); assert.ok(record.checkpoint.tree)
     assert.equal((await f.git.command(['rev-parse', record.backup])).trim(), f.expected.head)
+    assert.equal((await f.git.command(['write-tree'])).trim(), record.checkpoint.tree)
+    const lock = path.join(f.folder, '.git/gitviz-operation.lock')
+    let recovery = f.git
+    if (uncertain) {
+      assert.equal(f.git.processUncertain, true)
+      const lockBefore = await fs.readFile(lock, 'utf8')
+      const refsBefore = await f.git.command(['show-ref'])
+      const recordsBefore = await f.git.operations()
+      await assert.rejects(f.git.createBranch(f.first, 'unsafe-retry', f.expected), /不能继续写入/)
+      recovery = new GitService(f.folder)
+      await assert.rejects(recovery.createBranch(f.first, 'unsafe-other-host', f.expected), /另一个 Gitviz 写操作正在进行/)
+      assert.equal(await fs.readFile(lock, 'utf8'), lockBefore)
+      assert.equal(await f.git.command(['show-ref']), refsBefore)
+      assert.deepEqual(await f.git.operations(), recordsBefore)
+      assert.equal(await f.git.head(), f.expected.head)
+      assert.equal((await f.git.command(['write-tree'])).trim(), record.checkpoint.tree)
+      assert.equal(await fs.readFile(path.join(f.folder, 'file.txt'), 'utf8'), 'first\n')
+      // Only this fixture's known process tree has been proved stopped above.
+      // Simulate documented manual recovery; production must never auto-unlock.
+      await fs.unlink(lock)
+    } else {
+      assert.notEqual(f.git.processUncertain, true)
+      await assert.rejects(fs.stat(lock), { code: 'ENOENT' })
+    }
     await fs.unlink(f.hook)
-    await f.git.resumeCommit(record.id, f.expected, record.checkpoint)
-    assert.equal(await f.git.status(), '')
-    assert.equal((await f.git.command(['rev-parse', 'HEAD^'])).trim(), f.expected.head)
-    assert.equal((await f.git.operations()).records[0].state, 'completed')
+    await recovery.resumeCommit(record.id, f.expected, record.checkpoint)
+    assert.equal(await recovery.status(), '')
+    assert.equal((await recovery.command(['rev-parse', 'HEAD^'])).trim(), f.expected.head)
+    assert.equal((await recovery.command(['rev-parse', 'HEAD^{tree}'])).trim(), record.checkpoint.tree)
+    assert.equal((await recovery.command(['rev-parse', record.backup])).trim(), f.expected.head)
+    assert.equal((await recovery.operations()).records[0].state, 'completed')
   } finally {
     // Cleanup is limited to PIDs emitted by this fixture if an assertion fails.
     for (const name of ['parent', 'child']) {

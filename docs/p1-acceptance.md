@@ -36,7 +36,7 @@
 
 - a576797 的 [三系统 CI](https://github.com/fisHarly0/gitviz/actions/runs/37334503429) 全部通过：真实 Git、进程、生命周期、前端与构建；Windows 另含 NSIS 安装冒烟。601c477 增加真实签名测试后的 [CI37335956148](https://github.com/fisHarly0/gitviz/actions/runs/37335956148) 三系统也全部成功，补齐签名用例的跨平台后端证据。
 - 本批 `linked_edit_paths` Windows junction 测试和 `cargo check --release --locked --all-targets` 通过，日志为 scratch 下 `p1-audit-links-final.log`、`p1-audit-check.log`。只改测试，无需重跑所有原生 UI。Unix 目录/文件 symlink 分支已加入，不声称 Windows 执行过它。
-- P1 通过指上述约束中的可观察行为。外部 Git 不遵守 Gitviz 锁，最后一次检查后仍存在外部竞态；hooks 的外部副作用不回滚。无法确认进程停止时，操作维持未完成并暂停继续写入。早期 Windows 偶发清理异常未确认根因，不能写成已经彻底修复。
+- P1 通过指上述约束中的可观察行为。外部 Git 不遵守 Gitviz 锁，最后一次检查后仍存在外部竞态；hooks 的外部副作用不回滚。无法确认进程停止时，操作维持未完成并暂停继续写入。0a02417 的 Windows CI 捕获 taskkill 128 退出竞争；对应验收修正见 [决策记录](decisions/2026-10-06-process-timeout-acceptance.md)，生产仍保守保留锁，不能写成已消除所有清理异常。该提交 Linux/macOS CI 成功，包含前述 Unix 链接路径测试。
 - 强杀整个进程树、断电、硬件故障不保证任务完成或未保存缓冲持久化；应按 [进程异常](git-processes.md) 与 [操作恢复](operation-recovery.md) 检查现场。记录不是工作文件备份。
 - 签名实测为 SSH；GPG/硬件密钥/交互式解锁不冒充已验证。Linux/macOS 原生 UI、全面可访问性、真实陌生用户试用、最终版本干净安装/升级与三端最终包冒烟仍在 P2/P3。
 
