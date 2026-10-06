@@ -31,7 +31,15 @@ Stop-Process -Id $testApp.Id
 - `desktop-editor-smoke.cjs`：fork 真正同步文件、未保存导航保护、外部 HEAD 变化时拒绝保存并保留编辑缓冲、取消与重新开始、真实提交身份/index、切回主线同步文件。
 - `desktop-recovery-smoke.cjs`：恢复 hook 失败、操作记录与备份、取消不改 index/次数、确认后外部修改拒绝、继续提交的 tree/parent/身份、重开仓库记录持久、编辑缓冲保留和编辑中禁止续交、960×600 确认框。
 - 不模拟 Tauri invoke，也不替换 Git 后端。打开仓库使用合成拖放事件；文件夹选择框尚未自动化验证。
-- 小窗口通过 WebView 视口模拟；没有覆盖物理多设备、跨平台、离线 Monaco 或操作系统强制关闭。
+- 小窗口通过 WebView 视口模拟；上述脚本没有覆盖物理多设备、跨平台、离线 Monaco 或操作系统强制关闭。
 - 这是开发验收入口，尚未接入 CI，不能据此宣称已完成正式发行安装与升级验收。
 
 后续 [三端原生失败测试](native-failure-testing.md) 补充真实 worktree 占用、索引锁和 Windows 写入权限拒绝，使用当前源码重建的 exe；成功恢复后还检查分支栏不残留旧错误。
+
+## 编辑器无外部网络验证
+
+`tests/offline-editor-smoke.cjs` 自行启动当前 Windows 程序，使用全新 WebView2 数据目录和隔离仓库；设置上述 scratch、Playwright 路径及绝对路径 `GITVIZ_DESKTOP_EXECUTABLE` 后执行。端口 9348 必须空闲，不要另开测试程序。
+
+该脚本在首次进入编辑器前阻断 WebView 的外部 HTTP(S)，保留本地 Tauri 资源与 IPC。验证 JSON/CSS/HTML/TypeScript/核心编辑 worker 来自打包资源，未请求 CDN；取消保存保留草稿和磁盘原文，真实保存使用用户配置的 Git 身份，parent/文件/index 正确；正常关闭后重新打开，仍能在网络阻断下读取保存内容。也检查嵌入的许可证资源。结果与截图保存在指定 scratch。
+
+这是应用资源层的外部网络阻断，不是操作系统断网；不能代表依赖网络的用户 Git hooks、远程 JSON schema、签名服务或 GitHub 在线浏览也能离线工作。

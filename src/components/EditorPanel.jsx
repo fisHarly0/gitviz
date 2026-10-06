@@ -8,7 +8,7 @@
 
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 
-const Editor = lazy(() => import('@monaco-editor/react'))
+const Editor = lazy(() => import('./LocalCodeEditor.jsx'))
 
 // 文件后缀 → Monaco language id
 const LANG_BY_EXT = {
@@ -138,6 +138,7 @@ export default function EditorPanel({
             onChange={(v) => { reportDraft({ content: v ?? '' }); setContent(v ?? '') }}
             options={{
               readOnly: busy,
+              ariaLabel: `编辑文件：${filepath}`,
               minimap: { enabled: false },
               fontSize: 13,
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
