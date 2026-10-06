@@ -53,6 +53,8 @@
 
 当前提供源码构建流程及指定提交的 [Actions 验证产物](https://github.com/fisHarly0/gitviz/actions/workflows/ci.yml)，尚未发布正式 Release 或扩展商店版本。验证包不等同于正式支持承诺。
 
+最新固定验证构建为 [`486dae3` / CI 37484149175](https://github.com/fisHarly0/gitviz/actions/runs/37484149175)。在运行页的 Artifacts 中下载对应平台包，再按 [产物清单](docs/releases/0.3.0-validation-486dae3.json) 核对文件名和 SHA-256。Actions 产物保留 14 天；过期后需按该提交自行构建。
+
 本地三端都需要 Git；先检查 `git --version`。从源码构建需要 Node.js 20.19+（20.x）或 22.12+，开发环境以 [.node-version](.node-version) 为准。桌面另需 Rust 与系统原生工具链，见 [Tauri 环境要求](https://tauri.app/start/prerequisites/)。Windows 桌面运行需要 WebView2。
 
 在仓库根目录安装依赖：

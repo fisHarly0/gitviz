@@ -21,7 +21,12 @@ const read = name => fs.readFile(path.join(out, name + '.json'), 'utf8').then(JS
   const { chromium } = require(process.env.PLAYWRIGHT_CORE_PATH || 'playwright-core')
   const browser = await chromium.connectOverCDP(process.env.GITVIZ_CDP_URL || 'http://127.0.0.1:9348')
   try {
-    const page = browser.contexts().flatMap(context => context.pages()).find(p => /tauri\.localhost/.test(p.url()))
+    let page
+    const pageDeadline = Date.now() + 30000
+    while (!page && Date.now() < pageDeadline) {
+      page = browser.contexts().flatMap(context => context.pages()).find(p => /tauri\.localhost/.test(p.url()))
+      if (!page) await delay(100)
+    }
     assert.ok(page, 'native Tauri WebView is open')
     const errors = []; page.on('pageerror', error => errors.push(error.message))
     const button = name => page.getByRole('button', { name, exact: true }), history = page.locator('.operation-history')

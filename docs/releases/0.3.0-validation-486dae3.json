@@ -1,0 +1,211 @@
+{
+  "run": 37484149175,
+  "url": "https://github.com/fisHarly0/gitviz/actions/runs/37484149175",
+  "status": "development validation; not a formal release",
+  "source": "486dae37b082c8fdfe5025aa1c8bbe73e7259b98",
+  "platforms": [
+    {
+      "platform": "win32",
+      "arch": "x64",
+      "version": "0.3.0",
+      "source": "486dae37b082c8fdfe5025aa1c8bbe73e7259b98",
+      "clean": true,
+      "checksumsVerified": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 44310,
+          "sha256": "26d385ffb26b061203e98ef72d15fa827ecca4da26c9ef4301d7e95f52455422"
+        },
+        {
+          "name": "gitviz_0.3.0_x64-setup.exe",
+          "bytes": 5977045,
+          "sha256": "c91cae95215893219d4bff9ddd0aaf0c11d2bd0ff42699d3cbb5af10b0cb5297"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 102132,
+          "sha256": "b999f22ef9d4ca96048b43a2f58cdf6717c0f35721627dfd29f3c9cb5f33e237"
+        },
+        {
+          "name": "gitviz-windows-x64.exe",
+          "bytes": 15723520,
+          "sha256": "f65d0bdfbba42d10e86c55bb0f25f9bfb81dc369c2fb9efbd6e38aa430de16c6"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "arch": "x64",
+      "version": "0.3.0",
+      "source": "486dae37b082c8fdfe5025aa1c8bbe73e7259b98",
+      "clean": true,
+      "checksumsVerified": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 44310,
+          "sha256": "26d385ffb26b061203e98ef72d15fa827ecca4da26c9ef4301d7e95f52455422"
+        },
+        {
+          "name": "gitviz-0.3.0-linux-X64.tar.gz",
+          "bytes": 7732892,
+          "sha256": "428cbb7f64d2c319f8ed8ca636b9f944a639f91e0d21eeb0b00084ca88defcaa"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 102132,
+          "sha256": "b999f22ef9d4ca96048b43a2f58cdf6717c0f35721627dfd29f3c9cb5f33e237"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "arch": "arm64",
+      "version": "0.3.0",
+      "source": "486dae37b082c8fdfe5025aa1c8bbe73e7259b98",
+      "clean": true,
+      "checksumsVerified": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 44310,
+          "sha256": "26d385ffb26b061203e98ef72d15fa827ecca4da26c9ef4301d7e95f52455422"
+        },
+        {
+          "name": "gitviz-0.3.0-macos-ARM64.tar.gz",
+          "bytes": 7418104,
+          "sha256": "72aa1fc84260887fa7e15c08fa517ed2851a25059b11d060d464effa04c2ff03"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 102132,
+          "sha256": "b999f22ef9d4ca96048b43a2f58cdf6717c0f35721627dfd29f3c9cb5f33e237"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    }
+  ],
+  "crossPlatformPluginBytesIdentical": true,
+  "unixExecutablePermissionsPreserved": true,
+  "windowsCleanRunnerInstallation": {
+    "crossVersionUpgrade": "not tested",
+    "repositoryAndWebViewPreserved": true,
+    "firstInstall": true,
+    "uninstall": true,
+    "version": "0.3.0",
+    "sameVersionReinstall": true
+  },
+  "installedBinaryComparison": {
+    "referenceSHA256": "f65d0bdfbba42d10e86c55bb0f25f9bfb81dc369c2fb9efbd6e38aa430de16c6",
+    "installedSHA256": "64f3ae4ea4ad13707e0c854b79963e4770ef0a35338f0b166c5684d2a6a33c59",
+    "bytes": 15723520,
+    "bundleMarker": "UNK -> NSS",
+    "markerOffset": 12841512,
+    "allOtherBytesIdentical": true
+  },
+  "remaining": [
+    "Latest installed desktop startup and whole cross-version migration; finish export/hook/failed-save close cases using the corrected window helper",
+    "Linux/macOS native UI acceptance",
+    "Complete accessibility review and unfamiliar-user usability",
+    "Default AppData migration, signing/notarization and public release"
+  ],
+  "vscodeUpgrade": {
+    "host": "VS Code 1.140.0 on Windows",
+    "from": "0.2.0",
+    "to": "0.3.0",
+    "packageSHA256": "b999f22ef9d4ca96048b43a2f58cdf6717c0f35721627dfd29f3c9cb5f33e237",
+    "installedContentVerified": true,
+    "configurationPreserved": true,
+    "failedOperationResumedAfterNormalRestart": true,
+    "allThreePhasesPassed": true,
+    "evidence": "F:/Codex/work/gitviz-product/release-486dae3/vscode-upgrade-current-host/"
+  },
+  "desktopOfflineEditor": {
+    "platform": "Windows",
+    "rawExecutableSHA256": "f65d0bdfbba42d10e86c55bb0f25f9bfb81dc369c2fb9efbd6e38aa430de16c6",
+    "passed": true,
+    "checks": [
+      "fresh profile loads all five packaged workers with external network blocked",
+      "cancel keeps disk unchanged and draft intact; save commits exact content and configured identity",
+      "cold: normal close",
+      "restart reads saved content while external network remains blocked",
+      "restart: normal close"
+    ],
+    "evidence": "F:/Codex/work/gitviz-product/release-486dae3/offline-editor-close-diagnostic/",
+    "networkScope": "WebView HTTP(S) routing blocks external URLs; not operating-system network isolation",
+    "earlierFailure": "Earlier close timeout used Process.MainWindowHandle; diagnostics found it could target Tao Thread Event Target instead of Tauri Window. Corrected helper verified separately; retain failed evidence."
+  },
+  "desktopUpgrade": {
+    "latestAttempt": "incomplete",
+    "from": "0.2.0 portable",
+    "to": "0.3.0 NSIS",
+    "verified": [
+      "Exact installed bytes except Tauri NSIS marker",
+      "2000 commits loaded and preview preserved repository state",
+      "Shared isolated profile retained",
+      "Cancelled restore preserved state",
+      "Real hook failure preserved checkpoint"
+    ],
+    "notVerified": [
+      "Whole latest-package upgrade/restart sequence"
+    ],
+    "failure": "With corrected native-window targeting, the old portable phase closed normally; the latest installed phase did not expose a native WebView before the startup timeout. Full migration remains incomplete.",
+    "evidence": "F:/Codex/work/gitviz-product/release-486dae3/desktop-upgrade/",
+    "latestEvidence": "F:/Codex/work/gitviz-product/release-486dae3/desktop-upgrade-final-verified/",
+    "oldVersionNormalCloseWithCorrectedHelper": true
+  },
+  "dshUpgrade": {
+    "host": "DeepSeek Harness 0.2.0-rc.2 Web on Windows; VS Code 1.140.0 Integrated Browser",
+    "from": "0.2.0",
+    "to": "0.3.0",
+    "packageSHA256": "26d385ffb26b061203e98ef72d15fa827ecca4da26c9ef4301d7e95f52455422",
+    "installedBytesVerified": true,
+    "servedClientVerified": true,
+    "enabledBundlePreserved": true,
+    "sameBrowserTabRepositoryPreserved": true,
+    "failedOperationResumedAfterServerRestart": true,
+    "allThreePhasesPassed": true,
+    "evidence": "F:/Codex/work/gitviz-product/release-486dae3/dsh-upgrade/"
+  },
+  "desktopCloseHarnessCorrection": {
+    "diagnosis": "Process.MainWindowHandle selected a visible Tao Thread Event Target instead of the Tauri Window in the same process",
+    "wrongWindowClass": "Tao Thread Event Target",
+    "correctWindowClass": "Tauri Window",
+    "selection": "Require exactly one visible Tauri Window owned by the verified executable PID; no fallback to arbitrary windows",
+    "sameUntouchedEditorClosedWithCorrectTarget": true,
+    "evidence": "F:/Codex/work/gitviz-product/release-486dae3/window-target/"
+  },
+  "desktopCloseContract": {
+    "status": "incomplete",
+    "passedScenarios": [
+      "clean startup",
+      "untouched editor",
+      "message-only and content drafts",
+      "repeated close",
+      "cancel and discard",
+      "960x600 keyboard confirmation"
+    ],
+    "remainingScenarios": [
+      "export/native save dialog",
+      "active Git hook",
+      "failed commit preservation"
+    ],
+    "latestFailure": "WebView connection closed during export-scenario setup before the export action; preserve failure evidence",
+    "evidence": "F:/Codex/work/gitviz-product/release-486dae3/native-close-correct-window/"
+  }
+}

@@ -50,17 +50,28 @@ async function run() {
     }
     const command = async title => {
       // A fresh profile can show onboarding after CDP has already exposed the page.
+      const input = page.locator('.quick-input-widget input')
+      const option = page.locator('.quick-input-list .monaco-list-row.focused').filter({ hasText: title })
       await wait(async () => {
+        await page.bringToFront()
         for (const label of ['Continue without Signing In', 'Continue', 'Get Started']) {
           const button = page.getByRole('button', { name: label, exact: true })
           if (await button.isVisible()) await button.click()
         }
-        if (await page.locator('.quick-input-widget input').isVisible()) return true
-        await page.keyboard.press('Escape'); await page.keyboard.press('F1')
-        return page.locator('.quick-input-widget input').waitFor({ state: 'visible', timeout: 1000 }).then(() => true, () => false)
-      }, 'command palette ready')
-      await page.locator('.quick-input-widget input').fill('>' + title)
-      await page.locator('.quick-input-list .monaco-list-row').filter({ hasText: title }).first().click()
+        if (!await input.isVisible()) {
+          await page.keyboard.press('Escape'); await page.keyboard.press('F1')
+        }
+        try {
+          await input.fill('>' + title, { timeout: 1000 })
+          await option.waitFor({ state: 'visible', timeout: 1000 })
+          return true
+        } catch (error) {
+          if (error.name !== 'TimeoutError') throw error
+          return false
+        }
+      }, `command ready: ${title}`)
+      // Execute the selected command without depending on a moving palette row.
+      await input.press('Enter')
     }
     await fs.unlink(path.join(out, `runtime-${phase}.json`)).catch(error => { if (error.code !== 'ENOENT') throw error })
     await command('Gitviz Fixture Inspect')
@@ -84,7 +95,15 @@ async function run() {
     }
     await command('Gitviz: 打开交互式版本树')
     const frame = await (await page.waitForSelector('iframe.webview', { state: 'attached' })).contentFrame()
-    const text = () => frame.evaluate(() => document.querySelector('#active-frame')?.contentDocument?.body.innerText || '')
+    const text = async () => {
+      try {
+        return await frame.evaluate(() => document.querySelector('#active-frame')?.contentDocument?.body.innerText || '')
+      } catch (error) {
+        // The webview navigates from its initial document during native startup.
+        if (!page.isClosed() && !frame.isDetached() && /Execution context was destroyed/.test(error.message)) return ''
+        throw error
+      }
+    }
     const click = async (label, selector = 'button') => {
       await wait(() => frame.evaluate(({ label, selector }) => {
         const doc = document.querySelector('#active-frame')?.contentDocument

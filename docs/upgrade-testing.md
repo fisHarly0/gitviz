@@ -2,6 +2,20 @@
 
 当前 0.3.0 仍为开发构建；这些检查不代表已正式发布。源码、安装包和插件包必须区分，不能用源码测试替代已安装程序的行为。
 
+## 最新固定构建：486dae3（2026-10-06）
+
+使用 [CI 37484149175](https://github.com/fisHarly0/gitviz/actions/runs/37484149175) 的实际产物，源提交、干净工作树标记、全部校验和及三平台插件一致性均已核对。完整文件名与 SHA-256 见 [验证清单](releases/0.3.0-validation-486dae3.json)。这批包含离线编辑器和后续地图、失败恢复修复；下方 `51a873c` 是历史证据。
+
+| 检查 | 本批结果 |
+|---|---|
+| Windows 干净 runner 首次安装、重装、浏览、正常关闭和卸载 | 通过；安装后字节仅有已知 Tauri NSIS 类型标记差异 |
+| Windows VS Code 1.140.0：原 0.2.0 → 本批 VSIX | 全流程通过；设置和 Git 状态保留，失败记录跨正常重启后继续成功 |
+| Windows DSH 0.2.0-rc.2 Web：原 0.2.0 → 本批 tarball | 全流程通过；安装文件与实际提供的客户端代码核对，启用状态及同标签页仓库保留，重启服务后继续成功 |
+| Windows 桌面离线编辑 | 全新 profile 阻断外部 HTTP(S)，五类 worker、许可文本、取消/保存、重启读取与两次关闭复验通过；此前退出超时已定位为测试误选 Tao 内部窗口，驱动已修正 |
+| 原桌面 0.2.0 免安装 → 本批 NSIS | 2000 条历史、隔离存储、包内容和失败检查点已验证；关闭目标修正后旧版正常退出；最新安装阶段 WebView 启动超时，本批完整升级流程尚未通过 |
+
+本机证据根目录：`F:/Codex/work/gitviz-product/release-486dae3/`。VS Code 最终成功记录位于 `vscode-upgrade-current-host/`，DSH 位于 `dsh-upgrade/`，桌面离线成功复验位于 `offline-editor-close-diagnostic/`；此前失败目录保留，不替换成成功证据。VS Code 驱动改为等候命令实际就绪后用键盘执行，并容许启动期间只读 Webview 文本查询的瞬时上下文切换，Git 与包内容断言保持不变。
+
 ## Windows 桌面
 
 `scripts/test-windows-installer.ps1` 在全新测试目录安装 NSIS 包，运行真实 WebView，打开合成 Git 仓库并预览旧提交，然后正常关闭、同版本重装、再次启动和卸载。它检查 WebView 数据保留、仓库 HEAD/状态/引用不变、卸载注册和程序清理，并拒绝覆盖已有 Gitviz 安装。结果和截图保存在指定目录。
@@ -72,4 +86,4 @@ Windows 的 DeepSeek Harness 0.2.0-rc.2 Web profile 已实测原 0.2.0 tarball �
 
 ## 仍需验收
 
-三宿主原生并发、首次使用与缺少 Git 的恢复，以及其他操作系统的原生 UI 仍需验收。用户默认 AppData 的实际迁移、签名、公证和正式外部发布不在上述检查范围内。
+Windows 三宿主并发及缺少 Git 的恢复已有独立证据，见 [并发验证](native-concurrency-testing.md) 和 [首次使用](first-use.md)。仍须排查最新本机安装版 WebView 启动超时并完成完整升级复验，并完成其他操作系统的原生 UI、全面可访问性和陌生用户试用。用户默认 AppData 的实际迁移、签名、公证和正式外部发布不在上述检查范围内。

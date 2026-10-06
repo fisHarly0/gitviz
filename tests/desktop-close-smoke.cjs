@@ -37,7 +37,11 @@ async function withApp(name, action) {
       return fetch(`${cdp}/json/version`).then(response => response.ok, () => false)
     }, 'WebView2 startup')
     browser = await chromium.connectOverCDP(cdp)
-    const p = browser.contexts()[0].pages()[0]
+    let p
+    await until(() => {
+      p = browser.contexts().flatMap(context => context.pages()).find(page => /tauri\.localhost/.test(page.url()))
+      return Boolean(p)
+    }, 'native Tauri page')
     p.on('pageerror', error => errors.push(error.message))
     await p.locator('.repo-loader').waitFor()
     const nativeRequest = extra => execute('powershell.exe', ['-NoProfile', '-File', path.join(__dirname, 'helpers/request-desktop-close.ps1'), '-AppProcessId', String(child.pid), '-ExpectedExecutable', executable, ...extra], { windowsHide: true, env: { ...process.env, TEMP: out, TMP: out } })
@@ -146,7 +150,7 @@ async function edit(p, content, message) {
     await p.getByRole('button', { name: '取消编辑', exact: true }).click()
     await p.locator('.editor-panel').waitFor({ state: 'hidden' })
     await p.locator('.export-btn').click()
-    await p.locator('.export-btn').filter({ hasText: 'Packing...' }).waitFor()
+    await p.locator('.export-btn').filter({ hasText: '正在打包…' }).waitFor()
     await close(); await p.locator('.close-notice').waitFor()
     assert.equal(alive(), true)
     assert.equal(await p.getByRole('button', { name: '更换仓库', exact: true }).isDisabled(), true)

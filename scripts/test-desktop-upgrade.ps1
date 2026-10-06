@@ -79,8 +79,8 @@ try {
     if (!$ready) { throw "Native WebView did not start: $phase" }
     & node $test $phase
     if ($LASTEXITCODE -ne 0) { throw "Desktop migration phase failed: $phase" }
-    $application.Refresh()
-    if (!$application.CloseMainWindow() -or !$application.WaitForExit(15000)) { throw "Desktop did not close normally: $phase" }
+    & pwsh -NoProfile -File (Join-Path $PSScriptRoot '../tests/helpers/request-desktop-close.ps1') -AppProcessId $application.Id -ExpectedExecutable $executable
+    if ($LASTEXITCODE -ne 0 -or !$application.WaitForExit(15000)) { throw "Desktop did not close normally: $phase" }
     $application = $null
   }
 } finally {
