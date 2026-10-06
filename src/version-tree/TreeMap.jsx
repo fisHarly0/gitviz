@@ -149,13 +149,13 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
           {visible.nodes.map(node => {
             const match = matches(node), inLineage = node.folded ? node.members.some(oid => lineage.has(oid)) : lineage.has(node.oid)
             const muted = !match || (focusOid && !inLineage)
-            if (node.folded) return <button key={node.oid} className={`save-node folded-node ${muted ? 'muted' : ''}`} data-fold={node.group} style={{ left: node.x, top: node.y, '--lane': COLORS[node.lane % COLORS.length] }} aria-label={`展开 ${node.members.length} 个连续存档，${short(node.members[0])} 到 ${short(node.members.at(-1))}`} onClick={() => { setExpanded(previous => new Set([...previous, node.group])); setNavigation({ oid: node.members[0], selected, external: locateOid }) }}><span className="node-top"><Icon name="tree" size={14}/><strong>{node.members.length} 个连续存档</strong></span><span className="node-message">展开这段历史</span><span className="node-foot">{short(node.members[0])} — {short(node.members.at(-1))}</span></button>
+            if (node.folded) return <button key={node.oid} className={`save-node folded-node ${muted ? 'muted' : ''}`} data-fold={node.group} style={{ left: node.x, top: node.y, '--lane': COLORS[node.lane % COLORS.length] }} onClick={() => { setExpanded(previous => new Set([...previous, node.group])); setNavigation({ oid: node.members[0], selected, external: locateOid }) }}><span className="node-top"><Icon name="tree" size={14}/><strong>{node.members.length} 个连续存档</strong></span><span className="node-message">展开这段历史</span><span className="node-foot">{short(node.members[0])} — {short(node.members.at(-1))}</span></button>
             const active = selected === node.oid, head = snapshot.head === node.oid
             const compareIndex = compareOids.indexOf(node.oid)
             const nodeRefs = refs.get(node.oid) || []
             return <button key={node.oid} data-oid={node.oid} className={`save-node ${active ? 'selected' : ''} ${head ? 'at-head' : ''} ${muted ? 'muted' : ''} ${compareIndex >= 0 ? 'compared' : ''}`}
               style={{ left: node.x, top: node.y, '--lane': COLORS[node.lane % COLORS.length] }}
-              aria-label={`${head ? (readOnly ? '浏览基准，' : '当前位置，') : ''}${node.message}，${short(node.oid)}`} aria-pressed={active} tabIndex={active || (!selected && head) ? 0 : -1}
+              aria-pressed={active} tabIndex={active || (!selected && head) ? 0 : -1}
               title={`${node.message}\n${node.author}\n${nodeRefs.map(ref => ref.name).join(' · ')}\n${readOnly ? '点击只读预览' : comparing ? '选择比较节点' : '点击预览；Shift + 点击加入比较'}`}
               onClick={event => pick(node.oid, event.shiftKey)}>
               <span className="node-top"><span className="node-marker"/><code>{short(node.oid)}</code>{head && <span className="head-label">{readOnly ? '浏览基准' : '你在这里'}</span>}{compareIndex >= 0 && <span className="compare-label">{compareIndex === 0 ? 'A' : 'B'}</span>}{node.parents.length > 1 && <Icon name="fork" size={14}/>}</span>

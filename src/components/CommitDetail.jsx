@@ -14,7 +14,7 @@ function StatusBadge({ status }) {
   return (
     <span
       className="status-badge"
-      style={{ background: colors[status] || '#666' }}
+      style={{ background: colors[status] || '#666', color: status === 'add' || status === 'modify' ? '#0d1117' : undefined }}
     >
       {{ add: '新增', modify: '修改', remove: '删除', rename: '重命名' }[status] || status}
     </span>
