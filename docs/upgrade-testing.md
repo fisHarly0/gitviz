@@ -2,7 +2,24 @@
 
 当前 0.3.0 仍为开发构建；这些检查不代表已正式发布。源码、安装包和插件包必须区分，不能用源码测试替代已安装程序的行为。
 
-## 最新固定构建：486dae3（2026-10-07 复验）
+## 最新固定构建：03cff8a（2026-10-07）
+
+使用 [CI 37586172143](https://github.com/fisHarly0/gitviz/actions/runs/37586172143) 下载的实际产物，包含地图对比度与缩放焦点修复。三平台源提交、干净工作树标记、文件大小、全部 SHA-256、插件字节一致性及 Unix 执行权限已核对；[验证清单](releases/0.3.0-validation-03cff8a.json) 保存产物与各阶段结果。
+
+| 检查 | 本批结果 |
+|---|---|
+| Windows 干净 CI runner 安装、重装与卸载 | 通过；保留仓库与 WebView 数据，安装字节仅有已知 NSIS 标记差异 |
+| Windows VS Code 1.140.0：0.2.0 → 本批 VSIX | 旧版、升级、重启三个阶段通过；设置保留、安装内容一致，失败记录重启后继续成功 |
+| Windows DSH 0.2.0-rc.2 Web：0.2.0 → 本批 tarball | 三阶段通过；安装文件和实际提供的客户端一致，单个 bundle 启用状态及同标签页仓库保留，服务重启后继续成功 |
+| Windows 桌面 0.2.0 免安装 → 本批 NSIS | 三阶段通过；两版读取 2000 条历史，隔离存储保留，hook 失败后正常重启并继续成功，卸载保留外部数据 |
+
+所有写入仅针对合成仓库；继续成功均核对父提交、目标 tree、备份和工作区状态。DSH 使用同一个 Integrated Browser 标签页，不声称仓库选择跨关闭浏览器保留。桌面使用共享的隔离 WebView profile，不代表用户默认 AppData 迁移。
+
+证据位于 `F:/Codex/work/gitviz-product/release-03cff8a/`。VS Code 首次驱动在旧版阶段后中断，使用同一已安装 profile 与仓库续跑升级、重启两阶段并通过，未将中断运行算作一次完整成功。DSH 首次在准备测试仓库时触发 Git 30 秒超时，尚未进入升级；保留 `dsh-upgrade/initial-failure/`，增加命令耗时日志后复验三阶段通过，未更改超时或生产代码，根因仍未知。成功记录为各宿主的 `result-{old,upgraded,restarted}.json`，DSH 另有 `outcome.txt`，桌面另有 `desktop-migration-result.json`。
+
+本批未重跑固定包离线编辑及六组正常关闭场景，其证据仍属于下方 `486dae3`。Linux/macOS 原生界面、全面可访问性、陌生用户试用及正式发布仍未完成，不能由本批升级通过替代。
+
+## 历史固定构建：486dae3（2026-10-07 复验）
 
 使用 [CI 37484149175](https://github.com/fisHarly0/gitviz/actions/runs/37484149175) 的实际产物，源提交、干净工作树标记、全部校验和及三平台插件一致性均已核对。完整文件名与 SHA-256 见 [验证清单](releases/0.3.0-validation-486dae3.json)。这批包含离线编辑器和后续地图、失败恢复修复；下方 `51a873c` 是历史证据。
 
@@ -88,7 +105,7 @@ Windows 的 DeepSeek Harness 0.2.0-rc.2 Web profile 已实测原 0.2.0 tarball �
 
 若升级程序等待原生 WebView 超时，会在测试进程仍存活时采集窗口、线程、模块及小型进程转储到该测试目录；仅检查与预期 exe 匹配的 PID。采集失败不覆盖原启动错误，正常关闭另外核对退出码 0。转储只来自隔离验收进程，不自动上传；这是定位能力，不代表间歇性启动问题已修复。
 
-后续 d438d00 的 Windows CI 曾在初始页面就绪后打开仓库超时，不能算作安装验收通过。首次安装驱动现通过可见路径输入和打开按钮进入仓库，并保留失败页面截图/状态；本地同源 NSIS 的首次安装、重装和卸载通过，新 CI 仍需确认。该次与“原生窗口没有出现”的启动风险分别跟踪。
+后续 d438d00 的 Windows CI 曾在初始页面就绪后打开仓库超时，不能算作安装验收通过。首次安装驱动现通过可见路径输入和打开按钮进入仓库，并保留失败页面截图/状态；本地同源 NSIS 以及本页最新 03cff8a CI 的首次安装、重装和卸载均已通过。该次与“原生窗口没有出现”的启动风险分别跟踪，不据此声称历史间歇故障根因已修复。
 
 实测证据：`F:/Codex/work/gitviz-product/desktop upgrade confirmed/` 中三阶段 `result-*.json`、PNG、确认文本、失败检查点及 `desktop-migration-result.json`。安装程序和 raw exe 的 SHA 见发行验证清单；安装后的 exe 仅存在 Tauri NSIS 已知类型标记差异，其他字节全部一致，校验方式见 [工程交付说明](delivery.md)。加入该校验的首次安装/重装驱动也在 `installer-payload-check/` 完整通过。
 

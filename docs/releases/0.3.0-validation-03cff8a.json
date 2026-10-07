@@ -1,0 +1,275 @@
+{
+  "run": 37586172143,
+  "source": "03cff8a2ba55bcb669bd5b6b5f36a7c13b6fe7a5",
+  "platforms": [
+    {
+      "platform": "win32",
+      "arch": "x64",
+      "version": "0.3.0",
+      "source": "03cff8a2ba55bcb669bd5b6b5f36a7c13b6fe7a5",
+      "clean": true,
+      "checksumsVerified": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 44291,
+          "sha256": "845d9fc2bd60114b324531acf5853f75f1d8bd07c7e066aac2499ffb280fb58d"
+        },
+        {
+          "name": "gitviz_0.3.0_x64-setup.exe",
+          "bytes": 5972147,
+          "sha256": "57f2d58ca30b292da0bbc2a79fb5a7ccd83e87429413cdbbe93f09afd839600d"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 102151,
+          "sha256": "6176ac71db35359b1fb551b46c628dc81dd292bb4586116d60ce827e2dc8cfd5"
+        },
+        {
+          "name": "gitviz-windows-x64.exe",
+          "bytes": 15724544,
+          "sha256": "f0f59d0974046bffe9b6a6b628267f7a2cc4a3bfe839ef6848247dcdbc955648"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "arch": "x64",
+      "version": "0.3.0",
+      "source": "03cff8a2ba55bcb669bd5b6b5f36a7c13b6fe7a5",
+      "clean": true,
+      "checksumsVerified": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 44291,
+          "sha256": "845d9fc2bd60114b324531acf5853f75f1d8bd07c7e066aac2499ffb280fb58d"
+        },
+        {
+          "name": "gitviz-0.3.0-linux-X64.tar.gz",
+          "bytes": 7732771,
+          "sha256": "46b8c0532a0ab5724a9dedea48c1d90e826f566181d80a5281a0f24d42280586"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 102151,
+          "sha256": "6176ac71db35359b1fb551b46c628dc81dd292bb4586116d60ce827e2dc8cfd5"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "arch": "arm64",
+      "version": "0.3.0",
+      "source": "03cff8a2ba55bcb669bd5b6b5f36a7c13b6fe7a5",
+      "clean": true,
+      "checksumsVerified": true,
+      "artifacts": [
+        {
+          "name": "fisharly-gitviz-dsh-0.3.0.tgz",
+          "bytes": 44291,
+          "sha256": "845d9fc2bd60114b324531acf5853f75f1d8bd07c7e066aac2499ffb280fb58d"
+        },
+        {
+          "name": "gitviz-0.3.0-macos-ARM64.tar.gz",
+          "bytes": 7419263,
+          "sha256": "ba1b0a32c377cd6afac8a5a79a87adbc2c0a1c2915a671f0f047d0fde072bd5e"
+        },
+        {
+          "name": "gitviz-0.3.0.vsix",
+          "bytes": 102151,
+          "sha256": "6176ac71db35359b1fb551b46c628dc81dd292bb4586116d60ce827e2dc8cfd5"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 1062,
+          "sha256": "84533247f651330b3df7ee836fb0f5fae44173608ac9bc1e83d86237c53b1202"
+        }
+      ]
+    }
+  ],
+  "crossPlatformPluginsIdentical": true,
+  "unixExecutableModesPreserved": true,
+  "url": "https://github.com/fisHarly0/gitviz/actions/runs/37586172143",
+  "status": "development validation; not a formal release",
+  "verifiedDate": "2026-10-07",
+  "evidenceRoot": "F:/Codex/work/gitviz-product/release-03cff8a",
+  "windowsCIInstall": {
+    "uninstall": true,
+    "sameVersionReinstall": true,
+    "version": "0.3.0",
+    "crossVersionUpgrade": "not tested",
+    "repositoryAndWebViewPreserved": true,
+    "firstInstall": true
+  },
+  "vscodeUpgrade": {
+    "phases": {
+      "old": {
+        "version": "0.2.0",
+        "extensionPath": "F:\\Codex\\work\\gitviz-product\\release-03cff8a\\vscode-upgrade\\extensions\\fisharly0.gitviz-0.2.0",
+        "historyLimit": 20,
+        "hostVersion": "1.140.0",
+        "packageSHA256": "3ce183a5987642b17a6481c4117c65d5810056182463bfa1b09a005dec012a39",
+        "installedContentVerified": true,
+        "configurationPreserved": true,
+        "passed": true,
+        "head": "484149bac6bd488ba0e9af3f8610e68ed0359e99",
+        "restartRecovery": false
+      },
+      "upgraded": {
+        "version": "0.3.0",
+        "extensionPath": "F:\\Codex\\work\\gitviz-product\\release-03cff8a\\vscode-upgrade\\extensions\\fisharly0.gitviz-0.3.0",
+        "historyLimit": 20,
+        "hostVersion": "1.140.0",
+        "packageSHA256": "6176ac71db35359b1fb551b46c628dc81dd292bb4586116d60ce827e2dc8cfd5",
+        "installedContentVerified": true,
+        "configurationPreserved": true,
+        "passed": true,
+        "head": "484149bac6bd488ba0e9af3f8610e68ed0359e99",
+        "restartRecovery": false
+      },
+      "restarted": {
+        "version": "0.3.0",
+        "extensionPath": "F:\\Codex\\work\\gitviz-product\\release-03cff8a\\vscode-upgrade\\extensions\\fisharly0.gitviz-0.3.0",
+        "historyLimit": 20,
+        "hostVersion": "1.140.0",
+        "packageSHA256": "6176ac71db35359b1fb551b46c628dc81dd292bb4586116d60ce827e2dc8cfd5",
+        "installedContentVerified": true,
+        "configurationPreserved": true,
+        "passed": true,
+        "head": "01917fb4c13a98a0549e159872dfcea95a3018e6",
+        "restartRecovery": true
+      }
+    },
+    "allThreePhasesPassed": true
+  },
+  "desktopUpgrade": {
+    "phases": {
+      "old": {
+        "origin": "http://tauri.localhost",
+        "phase": "old",
+        "historicalCommits": 2000,
+        "sharedIsolatedWebViewProfile": true,
+        "storagePreserved": false,
+        "passed": true,
+        "head": "c20b8fb59fb41c32c612c604a245721083b2161a",
+        "installedWriteAndRestartRecovery": false,
+        "errors": []
+      },
+      "upgraded": {
+        "origin": "http://tauri.localhost",
+        "phase": "upgraded",
+        "historicalCommits": 2000,
+        "sharedIsolatedWebViewProfile": true,
+        "storagePreserved": true,
+        "passed": true,
+        "head": "c20b8fb59fb41c32c612c604a245721083b2161a",
+        "installedWriteAndRestartRecovery": false,
+        "errors": []
+      },
+      "restarted": {
+        "origin": "http://tauri.localhost",
+        "phase": "restarted",
+        "historicalCommits": 2000,
+        "sharedIsolatedWebViewProfile": true,
+        "storagePreserved": true,
+        "passed": true,
+        "head": "317e530c813adc266a5b353d59cb1220b9f4b011",
+        "installedWriteAndRestartRecovery": true,
+        "errors": []
+      }
+    },
+    "allThreePhasesPassed": true,
+    "migration": {
+      "oldSHA256": "81FBD701AAC9F305AF9C6765F157871323045064225B3E2F293A9883BF2EB6CE",
+      "uninstalledWithExternalDataPreserved": true,
+      "binaryComparison": {
+        "referenceSHA256": "f0f59d0974046bffe9b6a6b628267f7a2cc4a3bfe839ef6848247dcdbc955648",
+        "installedSHA256": "dfafb16995af483d109d034df4c9b318a35c94a155968bf002471221cf8d5f82",
+        "bytes": 15724544,
+        "bundleMarker": "UNK -> NSS",
+        "markerOffset": 12842216,
+        "allOtherBytesIdentical": true
+      },
+      "oldPortableToNewInstaller": true,
+      "sharedIsolatedWebViewProfile": true,
+      "targetVersion": "0.3.0",
+      "newSHA256": "F0F59D0974046BFFE9B6A6B628267F7A2CC4A3BFE839EF6848247DCDBC955648",
+      "installedSHA256": "DFAFB16995AF483D109D034DF4C9B318A35C94A155968BF002471221CF8D5F82",
+      "installedVersion": "0.3.0",
+      "oldVersion": "0.2.0",
+      "installerSHA256": "57F2D58CA30B292DA0BBC2A79FB5A7CCD83E87429413CDBBE93F09AFD839600D",
+      "installedRecoveryAcrossRestart": true
+    }
+  },
+  "dshUpgrade": {
+    "phases": {
+      "old": {
+        "servedClientVerified": true,
+        "clientSHA256": "1e4952596bbfe71f285616c99f476dd4814fd6fd3e433c92a779782d37f2d0fa",
+        "clientRevision": "2c4fe46b889f",
+        "version": "0.2.0",
+        "packageSHA256": "c338fc8ccbc258fde81dc1a0cf35e08dfda07034142034731ea1a3ee9afbc030",
+        "serverPid": 33124,
+        "installedBytesVerified": true,
+        "enabledBundlePreserved": true,
+        "selectedRepositoryPreserved": true,
+        "passed": true,
+        "head": "484149bac6bd488ba0e9af3f8610e68ed0359e99",
+        "restartRecovery": false
+      },
+      "upgraded": {
+        "servedClientVerified": true,
+        "clientSHA256": "8c970ee920c22bb96a2b644c259cdc858d269e35c006232a7a094d83dc9e0ed6",
+        "clientRevision": "623d77930a38",
+        "version": "0.3.0",
+        "packageSHA256": "845d9fc2bd60114b324531acf5853f75f1d8bd07c7e066aac2499ffb280fb58d",
+        "serverPid": 32832,
+        "installedBytesVerified": true,
+        "enabledBundlePreserved": true,
+        "selectedRepositoryPreserved": true,
+        "passed": true,
+        "head": "484149bac6bd488ba0e9af3f8610e68ed0359e99",
+        "restartRecovery": false
+      },
+      "restarted": {
+        "servedClientVerified": true,
+        "clientSHA256": "8c970ee920c22bb96a2b644c259cdc858d269e35c006232a7a094d83dc9e0ed6",
+        "clientRevision": "623d77930a38",
+        "version": "0.3.0",
+        "packageSHA256": "845d9fc2bd60114b324531acf5853f75f1d8bd07c7e066aac2499ffb280fb58d",
+        "serverPid": 44680,
+        "installedBytesVerified": true,
+        "enabledBundlePreserved": true,
+        "selectedRepositoryPreserved": true,
+        "passed": true,
+        "head": "d70cff5bdc65052ec590f9e5094221d41411e6c5",
+        "restartRecovery": true
+      }
+    },
+    "allThreePhasesPassed": true,
+    "host": "DeepSeek Harness 0.2.0-rc.2 Web on Windows; VS Code Integrated Browser"
+  },
+  "retainedFailures": {
+    "dsh": "Initial attempt timed out preparing the fixture, before fixture.json and upgrade. Diagnostic retry passed without changing the Git timeout or production code. Root cause remains unknown; initial-failure/ retained.",
+    "vscode": "Initial driver stopped after the old phase; upgraded and restarted phases resumed using the same installed profile and fixture. The interrupted attempt is not counted as a full successful run."
+  },
+  "notVerified": [
+    "Linux/macOS native UI; those platforms have CI builds and backend tests only",
+    "Default user AppData migration; desktop used an isolated shared WebView profile",
+    "Offline editor and six normal-close scenarios on this exact candidate; their fixed-package evidence remains on 486dae3",
+    "Root cause of historical intermittent native startup and fixture Git timeout",
+    "Complete accessibility audit and unfamiliar-user trial",
+    "Signing, notarization, Marketplace/npm publishing or formal GitHub Release"
+  ]
+}

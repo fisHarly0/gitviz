@@ -2,7 +2,7 @@
 
 当前源码版本为 **0.3.0 开发版**。CI 产物是指定提交的验证构建，不等于已发布到 GitHub Releases、VS Code Marketplace 或 npm。
 
-最新固定验证构建：[`486dae3` / run 37484149175](https://github.com/fisHarly0/gitviz/actions/runs/37484149175)，Windows / Linux / macOS 均通过。下载后已核对三个 manifest 的干净源提交、全部 SHA-256、跨平台插件字节一致性、Unix 执行权限和 Windows 干净 runner 安装证据。文件大小与完整哈希见 [该批产物清单](releases/0.3.0-validation-486dae3.json)，原生升级复验范围见 [升级验证](upgrade-testing.md)。下文 `51a873c` 属于早期批次，不包含后续修复。
+最新固定验证构建：[`03cff8a` / run 37586172143](https://github.com/fisHarly0/gitviz/actions/runs/37586172143)，Windows / Linux / macOS 均通过。下载后已核对三个 manifest 的干净源提交、全部 SHA-256、跨平台插件字节一致性、Unix 执行权限和 Windows 干净 runner 安装证据。Windows 三端旧版升级与失败操作跨重启恢复已通过，文件大小与完整哈希见 [该批产物清单](releases/0.3.0-validation-03cff8a.json)，实测范围及保留的失败记录见 [升级验证](upgrade-testing.md)。下文 `51a873c` 属于早期批次，不包含后续修复；`486dae3` 的离线编辑和六组关闭验收仍为历史证据。
 
 ## 自动检查
 
