@@ -67,7 +67,13 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
     pendingFocus.current = moveFocus ? oid : null
     element.scrollTo({ left: Math.max(0, (node.x + 94) * scale - element.clientWidth / 2), top: Math.max(0, node.y * scale - 90), behavior: 'instant' })
     if (moveFocus) {
-      const frame = requestAnimationFrame(() => element.querySelector(`[data-oid="${oid}"]`)?.focus({ preventScroll: true }))
+      const frame = requestAnimationFrame(() => {
+        const target = element.querySelector(`[data-oid="${oid}"]`)
+        if (target && pendingFocus.current === oid) {
+          target.focus({ preventScroll: true })
+          pendingFocus.current = null
+        }
+      })
       return () => cancelAnimationFrame(frame)
     }
   }, [selected, navigation, locateOid, byId, scale, horizontal, box.width, box.height])
@@ -115,7 +121,7 @@ export default function TreeMap({ snapshot, selected, onSelect, comparing, compa
         {filteredRefs.length > refLimit && <button onClick={() => setRefLimit(value => value + 30)}>显示更多引用（剩余 {filteredRefs.length - refLimit}）</button>}
       </div>
     </div>}
-    <div className="map-viewport" ref={viewport} tabIndex={0} aria-label="版本地图画布" aria-hidden={overview || undefined} inert={overview}
+    <div className="map-viewport" ref={viewport} role="group" tabIndex={0} aria-label="版本地图画布" aria-hidden={overview || undefined} inert={overview}
       onPointerDown={event => {
         if (event.button !== 0 || event.target.closest('button')) return
         drag.current = { x: event.clientX, y: event.clientY, left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop }

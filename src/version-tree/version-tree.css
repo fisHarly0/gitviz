@@ -22,7 +22,7 @@
   overflow: hidden;
   line-height: 1.5;
 }
-body.vscode-light .version-tree {
+body.vscode-light .version-tree, body.vscode-high-contrast-light .version-tree {
   --tree-green: #15794d; --tree-amber: #8b5908; --tree-blue: #285caf; --tree-purple: #7950b1; --tree-pink: #a33769;
 }
 .version-tree *, .version-tree *::before, .version-tree *::after { box-sizing: border-box; }
@@ -108,8 +108,8 @@ body.vscode-light .version-tree {
 .version-tree button.save-node:hover { border-color: var(--lane); background: var(--tree-raised); }
 .version-tree button.save-node.selected { outline: 2px solid var(--tree-amber); outline-offset: 3px; border-color: var(--tree-amber); background: var(--tree-raised); animation: node-arrival 250ms ease-out; }
 .version-tree button.save-node.at-head { border-color: var(--tree-green); }
-.version-tree button.save-node.muted { opacity: .28; }
-.version-tree button.save-node.muted:hover, .version-tree button.save-node.muted:focus-visible { opacity: 1; }
+.version-tree button.save-node.muted { background: var(--tree-bg); color: var(--tree-dim); }
+.version-tree .save-node.muted .node-foot { color: var(--tree-dim); }
 .version-tree button.save-node.compared { border-color: var(--tree-amber); }
 .node-top { display: flex; align-items: center; gap: 7px; color: var(--tree-dim); height: 15px; }
 .node-marker { width: 7px; height: 7px; border: 1.5px solid var(--lane); border-radius: 50%; }

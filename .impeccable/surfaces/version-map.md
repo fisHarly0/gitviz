@@ -15,3 +15,7 @@ FIRST VIEWPORT: 既有标题与当前位置按钮下增加紧凑、可换行的�
 FORM: 既有表面的局部扩展，直接塑造已授权功能；没有新视觉世界或方向抽签。标志交互是折叠段展开时保持定位，键盘继续逐个选择真实提交。
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+
+ACCESSIBILITY FOLLOW-UP: 为可命名的地图画布提供 group 语义；非匹配节点通过中性文字与底色区分，保留可读性，不再整体 opacity 淡化。补齐 VS Code 高对比度浅色主题的深色强调色。按实际主题检查搜索/分支聚焦、键盘定位、折叠和引用返回；验证三端构建与原生界面，保留未覆盖范围，不扩展成地图重设计。
+
+FOCUS: 原生键盘复验发现，显式定位的动画帧完成聚焦后仍留下 pendingFocus，之后缩放可把焦点从工具按钮拉回节点。两条聚焦路径都须消费同一请求，验证 Home/End/返回实际位置后缩放仍保留按钮焦点。

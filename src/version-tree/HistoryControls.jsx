@@ -7,7 +7,7 @@ export default function HistoryControls({ history, snapshot, query, disabled = f
     </div>
     {snapshot.shallow && <p className="history-warning">这是浅克隆，只能读取本机已有历史；更早提交需要先在 Git 中补全。</p>}
     {history.error && <p role="alert" className="history-warning">{history.error}</p>}
-    {query.trim() && <div className="history-results" aria-label="全历史搜索结果"><div className="history-results-heading"><strong>全历史搜索</strong><span role="status">{history.searching ? '正在搜索…' : results?.error || (results ? `${results.commits.length} 个结果${results.nextCursor ? '，还有更多' : ''}` : '等待搜索…')}</span></div>
+    {query.trim() && <div className="history-results" role="region" aria-label="全历史搜索结果"><div className="history-results-heading"><strong>全历史搜索</strong><span role="status">{history.searching ? '正在搜索…' : results?.error || (results ? `${results.commits.length} 个结果${results.nextCursor ? '，还有更多' : ''}` : '等待搜索…')}</span></div>
       {results?.commits.map(commit => <button className="history-hit quiet" key={commit.oid} disabled={history.loading || disabled} onClick={() => history.load({ target: commit.oid })} title={`定位到 ${commit.oid}`}><code>{commit.oid.slice(0, 7)}</code><span>{commit.message}<small>{commit.author}</small></span><span>定位</span></button>)}
       {results && !results.error && !results.commits.length && !history.searching && <p>全历史中没有找到匹配的存档。</p>}
       {results?.nextCursor && <button disabled={history.searching} onClick={history.moreResults}>更多搜索结果</button>}

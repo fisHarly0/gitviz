@@ -36,3 +36,15 @@
 仍未关闭的 incomplete：地图画布 div 的 aria-label 缺少适用角色，需要补足容器语义；部分文字涉及渐变、遮挡、短内容，自动工具不能确定对比度。落地页无 incomplete，其他六个状态各有 1–2 类。零 violation 不代表这些项已经通过。
 
 31 项前端测试、lint、桌面和两种插件构建通过。桌面第一次构建工具异常退出（-1073741819），原命令重试成功，未改构建参数。此次原生界面复验仅覆盖 Windows 桌面；VS Code/DSH 本批只验证构建，深浅主题、辅助技术、显示缩放和完整键盘路径仍待验收。朋友试用由用户后续安排，尚无真人结果。
+
+## 共享地图：62c8c98 后的修复批次
+
+地图画布使用具名 group，全历史搜索使用具名 region；非匹配节点改用中性文字与底色，保留完整不透明度；VS Code 高对比度浅色主题使用既有浅色强调色。原生键盘复验还发现定位后的残留聚焦请求会在缩放时把焦点拉回节点，现已在动画帧聚焦成功后消费该请求。
+
+- Windows VS Code 1.140.0 实际开发扩展、2000 条真实合成历史：深色、浅色、高对比度深色/浅色的地图、已返回结果的搜索、窄面板共 12 状态均为零 violation、零 incomplete。Home/End、返回实际位置、引用导航 Esc 返回、缩放保留焦点及 Git HEAD/status/refs 不变通过。
+- Windows DSH 0.2.0-rc.2 的实际安装插件，在 VS Code Integrated Browser 内运行；系统深浅偏好分别触发宿主真实主题，搜索结果两状态为零 violation，地图角色和键盘定位通过。服务端启动清单所加载 client.js 与安装文件校验一致；Git 未变化。不是受控假桥接或独立 Chromium。
+- Windows 原生桌面宽窄地图、分支、确认、失败恢复等 7 状态复验；具体结果和剩余颜色判断见本批交接。
+
+可复用 VS Code 检查：`tests/map-accessibility-smoke.cjs`。先在独立 profile 开启 CDP 9235 并加载当前扩展，设置 `GITVIZ_MAP_A11Y_ROOT`（含 `profile/User/settings.json` 与 2000 提交的 `fixture.json`）、`GITVIZ_AXE_PATH` 和 `PLAYWRIGHT_CORE_PATH` 后运行。fixture 的 `root` 必须在测试目录内，`head` 为实际 HEAD；检查会切换该隔离 profile 的主题。axe-core 位于测试目录，不是产品运行依赖。
+
+证据：`F:/Codex/work/gitviz-product/map-a11y-20261007/regression/`（实际执行上述回归脚本）、`verified/`（设计复核的相同流程截图）、`dsh/`。高对比度浅色早期探测错误使用了宿主 class 名，后续按实际 `vscode-high-contrast-light` 验证；早期连接/就绪失败不计入通过结果。自动检查和键盘自动化仍不能代替屏幕阅读器真实体验、完整 WCAG、全部主题及用户试用。
